@@ -132,6 +132,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
     // Indicate that we'll send a response asynchronously.
     return true;
+  } else if (message.type === "openOptionsPage") {
+    chrome.tabs.create({ url: chrome.runtime.getURL(message.url) });
+    sendResponse({ success: true });
   }
 });
 
@@ -157,7 +160,12 @@ async function updateCache(origin, username, displayName) {
   cacheLock = cacheLock.then(async () => {
     const cache = await getCache();
     const serverCache = cache[origin] || {};
-    serverCache[username] = { displayName, timestamp: Date.now() };
+    const existingEntry = serverCache[username];
+    let noExpireValue = false;
+    if (existingEntry && existingEntry.noExpire === true) {
+      noExpireValue = true;
+    }
+    serverCache[username] = { displayName, timestamp: Date.now(), noExpire: noExpireValue };
     cache[origin] = serverCache;
     await setCache(cache);
   }).catch((err) => {
