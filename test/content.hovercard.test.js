@@ -92,27 +92,37 @@ describe('GitHub Usernames Extension - Hovercard Functionality', () => {
           return;
         }
         const iconUrl = global.chrome.runtime.getURL("icon16.png");
-        let expirationText = "";
-        if (userData.noExpire) {
-          expirationText = "(No expiration)";
-        } else if (userData.timestamp) {
-          const expiryDate = new Date(userData.timestamp + SEVEN_DAYS_MS); // Use SEVEN_DAYS_MS
-          expirationText = `(Expires: ${expiryDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})`;
-        }
+        // Removed expirationText logic block
 
         const newRow = document.createElement("div");
-        newRow.style.display = "flex";
-        newRow.style.alignItems = "center";
-        newRow.style.marginTop = "8px";
-        newRow.style.paddingTop = "8px";
-        newRow.style.borderTop = "1px solid var(--color-border-muted, #555)"; // Keep for visual consistency if inspected
+        newRow.classList.add("d-flex", "flex-items-baseline", "f6", "mt-1", "color-fg-muted");
+        newRow.style.cursor = "pointer";
         newRow.setAttribute('data-testid', 'ghu-extension-row'); // For reliable selection
-        newRow.innerHTML = `<img src="${iconUrl}" style="width: 16px; height: 16px; margin-right: 8px;" alt="Extension icon"> <span style="flex-grow: 1;">${userData.name} ${expirationText}</span>`;
+
+        const iconContainer = document.createElement('div');
+        iconContainer.classList.add("mr-1", "flex-shrink-0");
+
+        const iconImg = document.createElement('img');
+        iconImg.src = iconUrl;
+        iconImg.alt = "Extension icon";
+        iconImg.style.width = "16px";
+        iconImg.style.height = "16px";
+        iconImg.style.verticalAlign = "middle";
+        iconContainer.appendChild(iconImg);
+
+        const textContainer = document.createElement('span');
+        textContainer.classList.add("lh-condensed", "overflow-hidden", "no-wrap");
+        textContainer.style.textOverflow = "ellipsis";
+        textContainer.textContent = userData.name; // Only display name
+        
+        newRow.appendChild(iconContainer);
+        newRow.appendChild(textContainer);
+
         newRow.addEventListener("click", () => {
           global.chrome.runtime.sendMessage({ type: "openOptionsPage", url: `options.html#${username}` });
         });
-        newRow.style.cursor = "pointer";
-        
+        // newRow.style.cursor = "pointer"; // Already set
+
         let contentContainer = hovercardElement.querySelector('.px-3.pb-3');
         if (!contentContainer) {
             // console.log('[TEST DEBUG] contentContainer not found, falling back to hovercardElement itself.');
@@ -177,10 +187,30 @@ describe('GitHub Usernames Extension - Hovercard Functionality', () => {
     
     const newRow = findNewRowInHovercard(hovercard);
     expect(newRow).not.toBeNull();
-    expect(newRow.querySelector('img').src).toBe('chrome://extension-id/icon16.png');
-    // Date formatting is locale-dependent. For Jan 1 + 7 days (Jan 8), it's "Jan 08" or "Jan 8"
-    // Using a regex to be more flexible with "Jan 08" vs "Jan 8"
-    expect(newRow.textContent).toMatch(/Test User \(Expires: Jan (0?8|8)\)/);
+
+    // Verify classes on newRow
+    expect(newRow.classList.contains('d-flex')).toBe(true);
+    expect(newRow.classList.contains('flex-items-baseline')).toBe(true);
+    expect(newRow.classList.contains('f6')).toBe(true);
+    expect(newRow.classList.contains('mt-1')).toBe(true);
+    expect(newRow.classList.contains('color-fg-muted')).toBe(true);
+    expect(newRow.style.cursor).toBe('pointer');
+
+    const iconContainer = newRow.querySelector('div.mr-1.flex-shrink-0');
+    expect(iconContainer).not.toBeNull();
+    
+    const img = iconContainer.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img.src).toBe('chrome://extension-id/icon16.png');
+    expect(img.alt).toBe('Extension icon');
+    expect(img.style.width).toBe('16px');
+    expect(img.style.height).toBe('16px');
+
+    const textContainer = newRow.querySelector('span.lh-condensed.overflow-hidden.no-wrap');
+    expect(textContainer).not.toBeNull();
+    expect(textContainer.style.textOverflow).toBe('ellipsis');
+    expect(textContainer.textContent).toBe('Test User'); // Assertion updated
+    
     expect(hovercard.hasAttribute(HOVERCARD_PROCESSED_MARKER)).toBe(true);
   });
 
@@ -194,7 +224,10 @@ describe('GitHub Usernames Extension - Hovercard Functionality', () => {
 
     const newRow = findNewRowInHovercard(hovercard);
     expect(newRow).not.toBeNull();
-    expect(newRow.textContent.trim()).toBe('Immortal User (No expiration)');
+    // Basic check for class and content, detailed class checks in the first test
+    expect(newRow.classList.contains('color-fg-muted')).toBe(true);
+    const textContainer = newRow.querySelector('span.lh-condensed');
+    expect(textContainer.textContent.trim()).toBe('Immortal User'); // Assertion updated
     expect(hovercard.hasAttribute(HOVERCARD_PROCESSED_MARKER)).toBe(true);
   });
 
@@ -207,8 +240,8 @@ describe('GitHub Usernames Extension - Hovercard Functionality', () => {
 
     const newRow = findNewRowInHovercard(hovercard);
     expect(newRow).not.toBeNull();
-    // Dec 25 + 7 days = Jan 1
-    expect(newRow.textContent).toMatch(/Cached User \(Expires: Jan (0?1|1)\)/);
+    const textContainer = newRow.querySelector('span.lh-condensed');
+    expect(textContainer.textContent).toBe('Cached User'); // Assertion updated
     expect(fetchDisplayName).not.toHaveBeenCalledWith('cacheduser');
     expect(registerElement).not.toHaveBeenCalledWith('cacheduser', expect.any(Function));
     expect(hovercard.hasAttribute(HOVERCARD_PROCESSED_MARKER)).toBe(true);

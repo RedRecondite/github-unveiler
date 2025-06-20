@@ -4,7 +4,7 @@
   // ------------------------------
   const PROCESSED_MARKER = "data-ghu-processed";
   const CACHE_KEY = "githubDisplayNameCache";
-  const displayNames = {}; // username => { name: fetched display name, timestamp: date, noExpire: boolean }
+  const displayNames = {}; // username => fetched display name
   const elementsByUsername = {}; // username => array of update callbacks
 
   // Helper: Get the cache from chrome.storage.local.
@@ -104,10 +104,10 @@
       }
 
       const processUpdate = (userData) => { // Changed parameter name
-        if (avatarImg.alt !== `@${userData.name}`) {
-          avatarImg.alt = `@${userData.name}`;
+        if (avatarImg.alt !== `@${userData}`) {
+          avatarImg.alt = `@${userData}`;
         }
-        updateTextNodes(usernameTextSpan, username, userData.name);
+        updateTextNodes(usernameTextSpan, username, userData);
 
         tooltipSpans.forEach((tooltipSpan) => {
           // Replace username in tooltip text. Be careful with case sensitivity if needed.
@@ -122,7 +122,7 @@
           if (tooltipSpan.textContent.match(regex)) {
             tooltipSpan.textContent = tooltipSpan.textContent.replace(
               regex,
-              userData.name
+              userData
             );
           }
         });
@@ -229,13 +229,13 @@
               ? img.alt.replace("@", "").trim()
               : null;
             if (originalAlt === username) {
-              if (img.alt !== `@${userData.name}`) {
-                img.alt = `@${userData.name}`;
+              if (img.alt !== `@${userData}`) {
+                img.alt = `@${userData}`;
               }
             }
           });
           // Update the text in the usernamesTextSpan
-          updateTextNodes(usernamesTextSpan, username, userData.name);
+          updateTextNodes(usernamesTextSpan, username, userData);
         };
 
         if (displayNames[username]) {
@@ -269,7 +269,7 @@
     const callbacks = elementsByUsername[username];
     if (!callbacks) return;
 
-    const data = displayNames[username] || { name: username, timestamp: 0, noExpire: true };
+    const data = displayNames[username] || username;
     // Ensure we only run each callback a single time
     delete elementsByUsername[username];
 
@@ -284,7 +284,7 @@
 
   /**
    * Walk all text nodes under `element`, replace @username or username tokens
-   * with the userData.name—but skip any node that already contains the full userData.name.
+   * with the userData—but skip any node that already contains the full userData.
    */
   function updateTextNodes(element, username, name) { // displayName parameter changed to name
     // Escape special regex chars in the username
@@ -340,7 +340,7 @@
 
       if (entry) {
         // Store the full object including timestamp and noExpire
-        displayNames[username] = { name: entry.displayName, timestamp: entry.timestamp, noExpire: entry.noExpire };
+        displayNames[username] = entry.displayName;
         updateElements(username);
         return;
       }
@@ -394,19 +394,19 @@
           let entry = serverCache[username];
           if (entry) {
             // Store the full object including timestamp and noExpire
-            displayNames[username] = { name: entry.displayName, timestamp: entry.timestamp, noExpire: entry.noExpire };
+            displayNames[username] = entry.displayName;
             updateElements(username);
             return;
           }
           attempt++;
         }
         // Fallback if we still haven't received a display name.
-        displayNames[username] = { name: username, timestamp: 0, noExpire: true };
+        displayNames[username] = username;
         updateElements(username);
       }
     } catch (err) {
       console.error("Error fetching display name for @" + username, err);
-      displayNames[username] = { name: username, timestamp: 0, noExpire: true };
+      displayNames[username] = name;
       updateElements(username);
     }
   }
@@ -444,13 +444,7 @@
         return;
       }
       const iconUrl = chrome.runtime.getURL("icon16.png");
-      let expirationText = "";
-      if (userData.noExpire) {
-        expirationText = "(No expiration)";
-      } else if (userData.timestamp) {
-        const expiryDate = new Date(userData.timestamp + 7 * 24 * 60 * 60 * 1000);
-        expirationText = `(Expires: ${expiryDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})`;
-      }
+      // Removed expirationText definition and logic block
 
       const newRow = document.createElement("div");
       newRow.classList.add("d-flex", "flex-items-baseline", "f6", "mt-1", "color-fg-muted");
@@ -472,7 +466,7 @@
       const textContainer = document.createElement('span');
       textContainer.classList.add("lh-condensed", "overflow-hidden", "no-wrap"); // no-wrap for ellipsis
       textContainer.style.textOverflow = "ellipsis";
-      textContainer.textContent = `${userData.name} ${expirationText}`;
+      textContainer.textContent = userData; // Only display name
       
       // Clear any previous innerHTML (though newRow is fresh, good practice if refactoring)
       newRow.innerHTML = ''; 
@@ -590,10 +584,10 @@
 
       if (usernameSpan) {
         const processUpdate = (userData) => { // Changed parameter name
-          if (avatarImg.alt !== `@${userData.name}`) {
-            avatarImg.alt = `@${userData.name}`; // Typically includes @
+          if (avatarImg.alt !== `@${userData}`) {
+            avatarImg.alt = `@${userData}`; // Typically includes @
           }
-          updateTextNodes(usernameSpan, username, userData.name);
+          updateTextNodes(usernameSpan, username, userData);
           // Mark the cell itself as processed after successful update attempt.
           // This ensures we don't re-process if the initial fetchDisplayName fails
           // and then a mutation observer picks it up again.
@@ -618,7 +612,7 @@
   }
 
   // Function to update the element directly
-  // This function is called by other callbacks which will now pass userData.name
+  // This function is called by other callbacks which will now pass name
   function updateElementDirectly(element, username, name) { // displayName changed to name
     let changed = false;
     if (
@@ -729,13 +723,13 @@
       }
 
       const processUpdate = (userData) => { // Changed parameter name
-        const h3Updated = updateTextNodes(h3Element, username, userData.name);
+        const h3Updated = updateTextNodes(h3Element, username, userData);
         if (h3Updated) {
           h3Element.setAttribute(PROCESSED_MARKER, "true");
         }
         // Avatar alt attributes typically include "@"
-        if (avatarElement.alt !== `@${userData.name}`) {
-          avatarElement.alt = `@${userData.name}`;
+        if (avatarElement.alt !== `@${userData}`) {
+          avatarElement.alt = `@${userData}`;
         }
       };
 
@@ -797,14 +791,14 @@
         const updated = updateTextNodes(
           anchor,
           username,
-          displayNames[username].name // Access .name property
+          displayNames[username]
         );
         if (updated) {
           anchor.setAttribute(PROCESSED_MARKER, "true");
         }
       } else {
-        registerElement(username, (userData) => { // Changed parameter name
-          const updated = updateTextNodes(anchor, username, userData.name);
+        registerElement(username, (name) => { // Changed parameter name
+          const updated = updateTextNodes(anchor, username, name);
           if (updated) {
             anchor.setAttribute(PROCESSED_MARKER, "true");
           }

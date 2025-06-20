@@ -3,6 +3,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const nameReplacementsBody = document.getElementById('nameReplacementsBody');
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
+  function handleHashScroll() {
+    if (window.location.hash) {
+      const targetId = window.location.hash.substring(1);
+      const targetElement = document.getElementById(targetId);
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetElement.classList.add('highlight-row');
+        setTimeout(() => {
+          targetElement.classList.remove('highlight-row');
+        }, 2000); // Highlight for 2 seconds
+      }
+    }
+  }
+
   function saveCache(cache, callback) {
     if (chrome && chrome.storage && chrome.storage.local) {
       chrome.storage.local.set({ githubDisplayNameCache: cache }, () => {
@@ -282,6 +296,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         });
+
+        // After table rows are generated, handle scrolling and highlighting
+        handleHashScroll();
+
       });
     } else {
       console.warn('chrome.storage API not available. Displaying placeholder for replacements.');

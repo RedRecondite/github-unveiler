@@ -133,8 +133,10 @@ describe('options.js', () => {
 
       Array.from(body.rows).forEach((row, index) => {
         const expectedEntry = expectedOrder[index];
-        const usernameCell = row.cells[1];
+        // Check row ID
+        expect(row.id).toBe(expectedEntry.username);
 
+        const usernameCell = row.cells[1];
         expect(usernameCell.children.length).toBe(1);
         const anchorElement = usernameCell.firstElementChild;
         expect(anchorElement).not.toBeNull();
@@ -159,6 +161,34 @@ describe('options.js', () => {
     });
 
     // ... other loading tests ...
+
+    test('loadNameReplacements should set id attribute on table rows', async () => {
+      const mockUsers = {
+        "user1": { displayName: "User One", timestamp: Date.now(), noExpire: false },
+        "user2": { displayName: "User Two", timestamp: Date.now(), noExpire: true }
+      };
+      fakeStorageCache = { "https://github.com": mockUsers };
+
+      optionsScriptMainFunction(); // This calls loadNameReplacements internally
+      await flushPromises();
+
+      const body = document.getElementById('nameReplacementsBody');
+      const rows = body.querySelectorAll('tr');
+      // Assuming only users from one origin for simplicity in this specific cache setup
+      expect(rows.length).toBe(Object.keys(mockUsers).length);
+
+      for (const username in mockUsers) {
+        const userRow = body.querySelector(`#${username}`);
+        expect(userRow).not.toBeNull();
+        if (userRow) {
+          expect(userRow.tagName).toBe('TR');
+          // Verify it's the correct row by checking some data point if necessary
+          // For example, check the username cell's text content if it's simple
+          const usernameCell = userRow.cells[1]; // Assuming username is in the second cell
+          expect(usernameCell.textContent).toBe(username);
+        }
+      }
+    });
   });
 
   describe('Display Name and Interaction Logic', () => {
