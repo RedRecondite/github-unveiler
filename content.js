@@ -453,40 +453,65 @@
       }
 
       const newRow = document.createElement("div");
-      newRow.style.display = "flex";
-      newRow.style.alignItems = "center";
-      newRow.style.marginTop = "8px";
-      newRow.style.paddingTop = "8px";
-      newRow.style.borderTop = "1px solid var(--color-border-muted, #555)"; // Use CSS variable for theme compatibility
+      newRow.classList.add("d-flex", "flex-items-baseline", "f6", "mt-1", "color-fg-muted");
+      newRow.style.cursor = "pointer";
+      // Removed direct style settings for display, alignItems, marginTop, paddingTop, borderTop
 
-      newRow.innerHTML = `<img src="${iconUrl}" style="width: 16px; height: 16px; margin-right: 8px;" alt="Extension icon"> <span style="flex-grow: 1;">${userData.name} ${expirationText}</span>`;
+      const iconContainer = document.createElement('div');
+      iconContainer.classList.add("mr-1", "flex-shrink-0");
+
+      const iconImg = document.createElement('img');
+      iconImg.src = iconUrl;
+      iconImg.alt = "Extension icon"; // Added alt text
+      iconImg.style.width = "16px";
+      iconImg.style.height = "16px";
+      iconImg.style.verticalAlign = "middle"; // May help alignment
+
+      iconContainer.appendChild(iconImg);
+
+      const textContainer = document.createElement('span');
+      textContainer.classList.add("lh-condensed", "overflow-hidden", "no-wrap"); // no-wrap for ellipsis
+      textContainer.style.textOverflow = "ellipsis";
+      textContainer.textContent = `${userData.name} ${expirationText}`;
+      
+      // Clear any previous innerHTML (though newRow is fresh, good practice if refactoring)
+      newRow.innerHTML = ''; 
+      newRow.appendChild(iconContainer);
+      newRow.appendChild(textContainer);
 
       newRow.addEventListener("click", () => {
         chrome.runtime.sendMessage({ type: "openOptionsPage", url: `options.html#${username}` });
       });
-      newRow.style.cursor = "pointer";
+      // newRow.style.cursor = "pointer"; // Already set above
 
       // Append to the correct container within the hovercard
       // The main content area often has a class like "Popover-message" or specific padding classes.
       // GitHub's structure: div[data-hydro-view] > div.Popover > div.Popover-message > div (target for append)
       // Or it could be a simpler structure like div[data-hydro-view] > div.px-3.pb-3
-      let contentContainer = hovercardElement.querySelector('.Popover-message > div:not([class]), .Popover-message > div[class*="Popover-message--large"], .px-3.pb-3');
-
-      if (!contentContainer) {
-        // Fallback if the specific selectors aren't found, append to the hovercardElement itself,
-        // but this might not be ideal aesthetically.
-        // console.warn("Could not find specific content container in hovercard, appending to root.", hovercardElement);
-        contentContainer = hovercardElement;
-      }
+      // This logic for finding the append target should be preserved.
+      const appendTarget = hovercardElement.querySelector('.Popover-message > div:not([class])') || 
+                         hovercardElement.querySelector('.Popover-message > div[class*="Popover-message--large"]') || 
+                         hovercardElement.querySelector('.px-3.pb-3') || 
+                         hovercardElement;
       
-      // Ensure not to add multiple times if processUpdate is somehow called again (though marker should prevent)
-      // A more specific check could be to see if a similar element already exists.
-      let existingExtensionRow = contentContainer.querySelector('img[alt="Extension icon"]');
-      if (existingExtensionRow && existingExtensionRow.closest('div').style.borderTop.includes("1px solid")) {
-          // Potentially already added by this extension, skip or replace
-          // For simplicity, we'll rely on HOVERCARD_PROCESSED_MARKER at the top of processHovercard
+      // Ensure not to add multiple times (though marker should prevent this)
+      // Check if a row with our specific structure (e.g. an icon with alt "Extension icon") already exists.
+      let existingExtensionRow = appendTarget.querySelector('img[alt="Extension icon"]');
+      // More specific check if the parent has our classes
+      if (existingExtensionRow && existingExtensionRow.parentElement && existingExtensionRow.parentElement.parentElement === newRow.parentElement && existingExtensionRow.parentElement.classList.contains("mr-1")) {
+          // Already added, do nothing or replace. For now, rely on HOVERCARD_PROCESSED_MARKER.
       } else {
-         contentContainer.appendChild(newRow);
+        // Add a top border to newRow to separate it visually, like other GitHub hovercard items
+        // This was previously handled by inline style, now handled by GitHub classes or explicit addition if needed
+        // GitHub's .mt-1 handles margin, but a border might be desired for separation.
+        // If the classes "d-flex flex-items-baseline f6 mt-1 color-fg-muted" don't provide a visual separator,
+        // a border can be added. For now, let's assume these classes are sufficient or a border is not strictly needed
+        // if it visually aligns with other non-bordered items.
+        // However, the original plan had a border, let's add it back if GH classes don't provide it.
+        // No, the plan was to REMOVE inline styles for borderTop. Let's stick to that.
+        // If a border is needed, it should be a class or a final style adjustment.
+        // For now, let's assume the classes are enough or a borderless look is acceptable.
+        appendTarget.appendChild(newRow);
       }
 
       hovercardElement.setAttribute(HOVERCARD_PROCESSED_MARKER, "true");

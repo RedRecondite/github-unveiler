@@ -126,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedEntries.forEach(entry => {
             const { origin, username, data } = entry;
             const row = nameReplacementsBody.insertRow();
+            row.id = username; // Add id attribute to the row
             row.dataset.origin = origin;
             row.dataset.username = username;
             row.dataset.originalDisplay = data.displayName || ''; // Store initial display name for revert
