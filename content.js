@@ -185,6 +185,74 @@
     });
   }
 
+  // Process blocked merge section to replace usernames with display names
+  async function processBlockedSectionMessages(root) { // now uses cache only, no direct refetch
+    if (!(root instanceof Element)) return;
+
+    const section = root.matches('[aria-label="Merging is blocked"]')
+      ? root
+      : root.querySelector('[aria-label="Merging is blocked"]');
+    if (!section) return;
+
+    const msgEl = section.querySelector('[class*="BlockedSectionMessage"]');
+    if (!msgEl || msgEl.hasAttribute(PROCESSED_MARKER)) return;
+
+    const LEADING_PHRASE = 'Waiting on code owner review from';
+    const originalText = msgEl.textContent || '';
+    const hasLeadingPhrase = originalText.startsWith(LEADING_PHRASE);
+
+    let serverCache = {};
+    try {
+      const cache = await getCache();
+      serverCache = cache[location.hostname] || {};
+    } catch (e) {
+      // ignore cache errors
+    }
+
+    // If the element does not start with the phrase, do not attempt to rebuild;
+    // just mark processed to avoid accidental phrase loss.
+    if (!hasLeadingPhrase) {
+      msgEl.setAttribute(PROCESSED_MARKER, 'true');
+      return;
+    }
+
+    // Remainder after the leading phrase (may contain usernames or already display names)
+    const remainder = originalText.slice(LEADING_PHRASE.length);
+
+    // Collect candidate tokens (usernames) from the remainder.
+    const tokenRegex = /@?[A-Za-z\d_](?:[A-Za-z\d_]|-(?=[A-Za-z\d_])){0,38}/g;
+    const tokens = remainder.match(tokenRegex) || [];
+
+    const seen = new Set();
+    const resolvedNames = [];
+
+    tokens.forEach(tok => {
+      const candidate = tok.startsWith('@') ? tok.slice(1) : tok;
+      // Prefer cache/displayNames only (no re-fetching).
+      const display =
+        displayNames[candidate] ||
+        (serverCache[candidate] && serverCache[candidate].displayName);
+      if (display) {
+        // Strip any accidental leading phrase prefix inside cached display
+        const cleanDisplay = display.startsWith(LEADING_PHRASE)
+          ? display.slice(LEADING_PHRASE.length).trim()
+          : display.trim();
+        if (!seen.has(candidate)) {
+          seen.add(candidate);
+          resolvedNames.push(cleanDisplay);
+        }
+      }
+    });
+
+    // If we resolved at least one name, rebuild the message
+    // Otherwise leave the original untouched
+    if (resolvedNames.length > 0) {
+      msgEl.textContent = LEADING_PHRASE + ':  ' + resolvedNames.join(' - ');
+    } else return;
+
+    msgEl.setAttribute(PROCESSED_MARKER, 'true');
+  }
+
   function processMultiUserGridCell(root) {
     if (!(root instanceof Element)) return;
 
@@ -653,7 +721,6 @@
       cellsToProcess.push(root);
     }
     // Prevent adding root twice if it's also captured by querySelectorAll (though unlikely for this specific case if root is the cell)
-    // However, the PROCESSED_MARKER check handles actual duplicate processing.
     cellsToProcess.push(
       ...Array.from(root.querySelectorAll('div[role="gridcell"]'))
     );
@@ -841,7 +908,7 @@
 
       if (!username) {
         // If no valid username could be extracted from link or text, mark and skip.
-        // This handles cases like "No Assignees" or headers that are definitely not usernames.
+        // handles cases like "No Assignees" or headers that are definitely not usernames.
         userElement.setAttribute(PROCESSED_MARKER, "true");
         return;
       }
@@ -991,6 +1058,7 @@
         processSingleUserGridCell(node);
         processMultiUserGridCell(node);
         processBoardGroupHeader(node);
+        processBlockedSectionMessages(node);
 
         // Check for hovercards
         const hovercardSelector = 'div[data-hydro-view*="user-hovercard-hover"]';
@@ -1042,5 +1110,6 @@
   processSingleUserGridCell(document.body);
   processMultiUserGridCell(document.body);
   processBoardGroupHeader(document.body);
+  processBlockedSectionMessages(document.body);
   document.querySelectorAll('div[data-hydro-view*="user-hovercard-hover"]').forEach(processHovercard);
 })();
