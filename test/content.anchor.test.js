@@ -27,6 +27,9 @@ describe("Anchor Processing", () => {
     emptyUser: "", // fetchDisplayName will resolve with this, then content.js logic should handle it
     spaceUser: "   ", // fetchDisplayName will resolve with this
     nullUser: null, // fetchDisplayName will resolve with this (simulating no .vcard-fullname)
+    formalUser: "Doe, John (Engineering)", // Should be reformatted to "John Doe"
+    formalUserSpaces: "Van Der Berg, Jane Marie (Product)", // Should be reformatted to "Jane Marie Van Der Berg"
+    formalUserSimple: "Smith, Bob (Manager)", // Should be reformatted to "Bob Smith"
   };
 
 
@@ -157,7 +160,23 @@ describe("Anchor Processing", () => {
             if (!fetchedName || fetchedName.trim() === '') { // Handle empty/whitespace fetched name
                 fetchedName = username;
             }
-            
+
+            // Detect and reformat "LastName, FirstName (Something)" to "FirstName LastName"
+            // Only if exactly one comma, one open-paren, and one close-paren
+            const commaCount = (fetchedName.match(/,/g) || []).length;
+            const openParenCount = (fetchedName.match(/\(/g) || []).length;
+            const closeParenCount = (fetchedName.match(/\)/g) || []).length;
+
+            if (commaCount === 1 && openParenCount === 1 && closeParenCount === 1) {
+              // Try to match "LastName, FirstName (Something)" format
+              const nameFormatMatch = fetchedName.match(/^([^,]+),\s*([^(]+)\s*\([^)]+\)$/);
+              if (nameFormatMatch) {
+                const lastName = nameFormatMatch[1].trim();
+                const firstName = nameFormatMatch[2].trim();
+                fetchedName = `${firstName} ${lastName}`;
+              }
+            }
+
             // Simulate background script's releaseLock behavior for updating cache
             // This aligns with how content.js expects the cache to be populated after a fetch
             displayNames[username] = { name: fetchedName, timestamp: Date.now(), noExpire: false };
@@ -167,7 +186,7 @@ describe("Anchor Processing", () => {
                 type: "releaseLock", // This call is mostly for tests that assert on sendMessage
                 origin: global.location.hostname,
                 username: username,
-                displayName: fetchedName 
+                displayName: fetchedName
             });
             updateElements(username);
 
@@ -391,6 +410,110 @@ describe("Anchor Processing", () => {
        expect(global.chrome.runtime.sendMessage.lastReleaseLockMessage).toEqual(
          expect.objectContaining({ displayName: username })
       );
+    });
+  });
+
+  describe("LastName, FirstName (Something) Format Detection", () => {
+    test("should reformat 'Doe, John (Engineering)' to 'John Doe'", async () => {
+      const username = "formalUser"; // mockDisplayNamesForFetch.formalUser is "Doe, John (Engineering)"
+      const expectedName = "John Doe";
+      const anchor = document.createElement("a");
+      anchor.setAttribute("data-hovercard-url", `/users/${username}`);
+      anchor.textContent = `@${username}`;
+      document.body.appendChild(anchor);
+
+      processAnchorsByHovercard(document.body);
+      await flushPromises();
+
+      expect(anchor.textContent).toBe(`@${expectedName}`);
+      expect(global.chrome.runtime.sendMessage.lastReleaseLockMessage).toEqual(
+        expect.objectContaining({ displayName: expectedName })
+      );
+    });
+
+    test("should reformat 'Van Der Berg, Jane Marie (Product)' to 'Jane Marie Van Der Berg'", async () => {
+      const username = "formalUserSpaces"; // mockDisplayNamesForFetch.formalUserSpaces is "Van Der Berg, Jane Marie (Product)"
+      const expectedName = "Jane Marie Van Der Berg";
+      const anchor = document.createElement("a");
+      anchor.setAttribute("data-hovercard-url", `/users/${username}`);
+      anchor.textContent = `@${username}`;
+      document.body.appendChild(anchor);
+
+      processAnchorsByHovercard(document.body);
+      await flushPromises();
+
+      expect(anchor.textContent).toBe(`@${expectedName}`);
+      expect(global.chrome.runtime.sendMessage.lastReleaseLockMessage).toEqual(
+        expect.objectContaining({ displayName: expectedName })
+      );
+    });
+
+    test("should reformat 'Smith, Bob (Manager)' to 'Bob Smith'", async () => {
+      const username = "formalUserSimple"; // mockDisplayNamesForFetch.formalUserSimple is "Smith, Bob (Manager)"
+      const expectedName = "Bob Smith";
+      const anchor = document.createElement("a");
+      anchor.setAttribute("data-hovercard-url", `/users/${username}`);
+      anchor.textContent = `@${username}`;
+      document.body.appendChild(anchor);
+
+      processAnchorsByHovercard(document.body);
+      await flushPromises();
+
+      expect(anchor.textContent).toBe(`@${expectedName}`);
+      expect(global.chrome.runtime.sendMessage.lastReleaseLockMessage).toEqual(
+        expect.objectContaining({ displayName: expectedName })
+      );
+    });
+
+    test("should NOT reformat names with multiple commas", async () => {
+      const username = "multiCommaUser";
+      // Add to global.fetch mock temporarily for this test
+      const originalFetchedName = "Last, First, Middle (Title)";
+      const anchor = document.createElement("a");
+      anchor.setAttribute("data-hovercard-url", `/users/${username}`);
+      anchor.textContent = `@${username}`;
+      document.body.appendChild(anchor);
+
+      // Mock fetch to return a name with multiple commas
+      const originalFetch = global.fetch;
+      global.fetch = jest.fn(() => Promise.resolve({
+        ok: true,
+        text: () => Promise.resolve(`<html><body><div class="vcard-fullname">${originalFetchedName}</div></body></html>`)
+      }));
+
+      processAnchorsByHovercard(document.body);
+      await flushPromises();
+
+      // Should NOT be reformatted (should stay as is)
+      expect(anchor.textContent).toBe(`@${originalFetchedName}`);
+
+      // Restore original fetch
+      global.fetch = originalFetch;
+    });
+
+    test("should NOT reformat names without parentheses", async () => {
+      const username = "noParenUser";
+      const originalFetchedName = "Last, First";
+      const anchor = document.createElement("a");
+      anchor.setAttribute("data-hovercard-url", `/users/${username}`);
+      anchor.textContent = `@${username}`;
+      document.body.appendChild(anchor);
+
+      // Mock fetch to return a name without parentheses
+      const originalFetch = global.fetch;
+      global.fetch = jest.fn(() => Promise.resolve({
+        ok: true,
+        text: () => Promise.resolve(`<html><body><div class="vcard-fullname">${originalFetchedName}</div></body></html>`)
+      }));
+
+      processAnchorsByHovercard(document.body);
+      await flushPromises();
+
+      // Should NOT be reformatted (should stay as is)
+      expect(anchor.textContent).toBe(`@${originalFetchedName}`);
+
+      // Restore original fetch
+      global.fetch = originalFetch;
     });
   });
 
