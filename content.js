@@ -470,6 +470,22 @@
           displayName = username;
         }
 
+        // Detect and reformat "LastName, FirstName (Something)" to "FirstName LastName"
+        // Only if exactly one comma, one open-paren, and one close-paren
+        const commaCount = (displayName.match(/,/g) || []).length;
+        const openParenCount = (displayName.match(/\(/g) || []).length;
+        const closeParenCount = (displayName.match(/\)/g) || []).length;
+
+        if (commaCount === 1 && openParenCount === 1 && closeParenCount === 1) {
+          // Try to match "LastName, FirstName (Something)" format
+          const nameFormatMatch = displayName.match(/^([^,]+),\s*([^(]+)\s*\([^)]+\)$/);
+          if (nameFormatMatch) {
+            const lastName = nameFormatMatch[1].trim();
+            const firstName = nameFormatMatch[2].trim();
+            displayName = `${firstName} ${lastName}`;
+          }
+        }
+
         // Tell the background to update the cache and release the lock.
         await chrome.runtime.sendMessage({
           type: "releaseLock",
@@ -482,24 +498,7 @@
         updateElements(username);
       } else {
         // Another content script is already fetching this profile.
-        // Poll until the cache is updated.
-        const maxAttempts = 10;
-        let attempt = 0;
-        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-        while (attempt < maxAttempts) {
-          await wait(500);
-          let cache = await getCache();
-          const serverCache = cache[location.hostname] || {};
-          let entry = serverCache[username];
-          if (entry) {
-            // Store the full object including timestamp and noExpire
-            displayNames[username] = entry.displayName;
-            updateElements(username);
-            return;
-          }
-          attempt++;
-        }
-        // Fallback if we still haven't received a display name.
+        // Use the username as fallback.
         displayNames[username] = username;
         updateElements(username);
       }
