@@ -113,9 +113,9 @@ function injectContentScript(tabId) {
 - `"transform": {}` - Disables default transformations, using native ES6
 - `NODE_OPTIONS=--experimental-vm-modules` - Enables ES6 module support in Jest
 
-### 5. Refactored Test File Example
+### 5. Refactored Test File Examples
 
-**File:** `test/content.utility.test.js`
+#### Example 1: `test/content.utility.test.js`
 
 **Before (BAD - 257 lines):**
 ```javascript
@@ -144,6 +144,31 @@ describe('isValidUsername', () => {
 });
 ```
 
+#### Example 2: `test/content.displayname.test.js`
+
+**Before (BAD - 147 lines):**
+```javascript
+// Duplicated from content.js for testing purposes
+function parseDisplayNameFormat(displayName, enabled) {
+  // ... duplicated implementation (30+ lines)
+}
+
+describe('parseDisplayNameFormat', () => {
+  // ... tests
+});
+```
+
+**After (GOOD - 120 lines):**
+```javascript
+// REFACTORED TEST FILE
+// This test file now imports and tests the ACTUAL code from content-utils.js
+import { parseDisplayNameFormat } from '../content-utils.js';
+
+describe('parseDisplayNameFormat', () => {
+  // ... same tests, now testing real code!
+});
+```
+
 ## Benefits Achieved
 
 ### ✅ Single Source of Truth
@@ -156,6 +181,8 @@ describe('isValidUsername', () => {
 
 ### ✅ Reduced Code Duplication
 - `content.utility.test.js`: 257 lines → 205 lines (-20%)
+- `content.displayname.test.js`: 147 lines → 120 lines (-18%)
+- **Total: 2 test files refactored, 52 tests now testing real production code**
 - More importantly: 0 duplicated implementation code
 
 ### ✅ Better Maintainability
@@ -233,19 +260,16 @@ Common issues:
 ## Test Files Ready for Refactoring
 
 ### ✅ Already Refactored
-- `test/content.utility.test.js` - **DONE** ✓
+- `test/content.utility.test.js` - **DONE** ✓ (31 tests passing)
+- `test/content.displayname.test.js` - **DONE** ✓ (21 tests passing)
 
 ### 🔄 Ready to Refactor
 
-1. **`test/content.displayname.test.js`**
-   - Function to move: `parseDisplayNameFormat()` (already in content-utils.js!)
-   - Lines 4-34 are duplicated code
-   - Simply replace with: `import { parseDisplayNameFormat } from '../content-utils.js';`
-
-2. **Other test files**
-   - Review each file for duplicated implementations
-   - Extract any additional functions needed
+1. **Other test files** (12 remaining)
+   - These use CommonJS/global Jest syntax and need ES6 migration
+   - May also have duplicated implementations to extract
    - Follow the steps above
+   - Files: `content.anchor.test.js`, `content.boardgroupheader.test.js`, `content.blockedsection.test.js`, `content.grid.*.test.js`, `content.hovercard.test.js`, `content.idempotency.test.js`, `content.mutation.test.js`, `content.projects.test.js`, `content.statuskeywords.test.js`, `background.test.js`, `options.test.js`
 
 ## Running Tests
 
