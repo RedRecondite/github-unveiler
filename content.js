@@ -37,6 +37,7 @@
   // ------------------------------
   const PROCESSED_MARKER = "data-ghu-processed";
   const CACHE_KEY = "githubDisplayNameCache";
+  const SETTINGS_KEY = "githubUnveilerSettings";
   const displayNames = {}; // username => fetched display name
   const elementsByUsername = {}; // username => array of update callbacks
 
@@ -47,6 +48,57 @@
         resolve(result[CACHE_KEY] || {});
       });
     });
+  }
+
+  // Helper: Get the settings from chrome.storage.local.
+  function getSettings() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get([SETTINGS_KEY], (result) => {
+        resolve(result[SETTINGS_KEY] || {});
+      });
+    });
+  }
+
+  /**
+   * Parses display names in the format "LastName, FirstName (Something)"
+   * and rewrites them as "FirstName LastName" if enabled.
+   * Only performs replacement if the display name has exactly one comma,
+   * one open-parenthesis, and one close-parenthesis.
+   *
+   * @param {string} displayName The display name to parse
+   * @param {boolean} enabled Whether the parsing is enabled
+   * @returns {string} The parsed display name or original if parsing is disabled or format doesn't match
+   */
+  function parseDisplayNameFormat(displayName, enabled) {
+    if (!enabled || !displayName) {
+      return displayName;
+    }
+
+    // Count occurrences of comma, open-paren, and close-paren
+    const commaCount = (displayName.match(/,/g) || []).length;
+    const openParenCount = (displayName.match(/\(/g) || []).length;
+    const closeParenCount = (displayName.match(/\)/g) || []).length;
+
+    // Only proceed if exactly one of each
+    if (commaCount !== 1 || openParenCount !== 1 || closeParenCount !== 1) {
+      return displayName;
+    }
+
+    // Match the pattern: "LastName, FirstName (Something)"
+    // This regex captures:
+    // - Group 1: LastName (can include spaces)
+    // - Group 2: FirstName (can include spaces)
+    // - Group 3: Content in parentheses (optional capture for validation)
+    const pattern = /^([^,]+),\s*([^(]+)\s*\([^)]+\)\s*$/;
+    const match = displayName.match(pattern);
+
+    if (match) {
+      const lastName = match[1].trim();
+      const firstName = match[2].trim();
+      return `${firstName} ${lastName}`;
+    }
+
+    return displayName;
   }
 
   function processBoardGroupHeader(root) {
@@ -501,13 +553,18 @@
       return;
     }
     try {
+      // Get settings to check if display name parsing is enabled
+      const settings = await getSettings();
+      const parseEnabled = settings.parseDisplayNameFormat || false;
+
       let cache = await getCache();
       const serverCache = cache[location.hostname] || {};
       let entry = serverCache[username];
 
       if (entry) {
-        // Store the full object including timestamp and noExpire
-        displayNames[username] = entry.displayName;
+        // Apply display name parsing if enabled
+        const parsedDisplayName = parseDisplayNameFormat(entry.displayName, parseEnabled);
+        displayNames[username] = parsedDisplayName;
         updateElements(username);
         return;
       }
@@ -538,15 +595,18 @@
           displayName = username;
         }
 
+        // Apply display name parsing if enabled
+        const parsedDisplayName = parseDisplayNameFormat(displayName, parseEnabled);
+
         // Tell the background to update the cache and release the lock.
         await chrome.runtime.sendMessage({
           type: "releaseLock",
           origin: location.hostname,
           username: username,
-          displayName: displayName,
+          displayName: displayName, // Store original in cache
         });
 
-        displayNames[username] = displayName;
+        displayNames[username] = parsedDisplayName; // Use parsed version in memory
         updateElements(username);
       } else {
         // Another content script is already fetching this profile.
@@ -560,8 +620,9 @@
           const serverCache = cache[location.hostname] || {};
           let entry = serverCache[username];
           if (entry) {
-            // Store the full object including timestamp and noExpire
-            displayNames[username] = entry.displayName;
+            // Apply display name parsing if enabled
+            const parsedDisplayName = parseDisplayNameFormat(entry.displayName, parseEnabled);
+            displayNames[username] = parsedDisplayName;
             updateElements(username);
             return;
           }
