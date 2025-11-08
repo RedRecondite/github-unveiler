@@ -8,6 +8,12 @@
  */
 
 /**
+ * Marker attribute for processed elements
+ */
+export const PROCESSED_MARKER = "data-ghu-processed";
+export const HOVERCARD_PROCESSED_MARKER = "data-ghu-hovercard-processed";
+
+/**
  * Checks if a given string is a valid GitHub username.
  * - Between 1 and 39 characters long.
  * - Consists of alphanumeric characters and single hyphens.
