@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Test on Node ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run tests
+      run: npm test
+
+    - name: Upload coverage reports (if available)
+      if: matrix.node-version == 20 && always()
+      continue-on-error: true
+      uses: codecov/codecov-action@v4
+      with:
+        fail_ci_if_error: false
+
+  validate:
+    name: Validate Extension
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate manifest.json
+      run: |
+        if ! jq empty manifest.json; then
+          echo "Invalid JSON in manifest.json"
+          exit 1
+        fi
+        echo "manifest.json is valid JSON"
+
+        # Check required fields
+        if ! jq -e '.manifest_version' manifest.json > /dev/null; then
+          echo "Missing manifest_version"
+          exit 1
+        fi
+
+        if ! jq -e '.name' manifest.json > /dev/null; then
+          echo "Missing name"
+          exit 1
+        fi
+
+        if ! jq -e '.version' manifest.json > /dev/null; then
+          echo "Missing version"
+          exit 1
+        fi
+
+        echo "All required manifest fields present"
+
+    - name: Check file structure
+      run: |
+        # Check that required files exist
+        required_files=("manifest.json" "background.js" "content.js" "options.js" "options.html")
+
+        for file in "${required_files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "Missing required file: $file"
+            exit 1
+          fi
+        done
+
+        echo "All required extension files present"
+
+  lint:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Check for syntax errors
+      run: |
+        # Check JavaScript files for syntax errors
+        for file in *.js test/*.js; do
+          if [ -f "$file" ]; then
+            node --check "$file" || {
+              echo "Syntax error in $file"
+              exit 1
+            }
+          fi
+        done
+        echo "All JavaScript files have valid syntax"
+
+    - name: Check for TODO/FIXME comments
+      continue-on-error: true
+      run: |
+        echo "Checking for TODO and FIXME comments..."
+        grep -r "TODO\|FIXME" --include="*.js" --exclude-dir=node_modules . || echo "No TODO/FIXME comments found"

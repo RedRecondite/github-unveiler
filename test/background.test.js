@@ -128,7 +128,7 @@ describe("background.js", () => {
       expect(console.log).toHaveBeenCalledWith("Requesting permission for", expectedOriginPattern);
       expect(console.log).toHaveBeenCalledWith("Permission granted for", expectedOriginPattern);
       expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
-        { target: { tabId: tab.id }, files: ["content-utils-browser.js", "content.js"] }, expect.any(Function)
+        { target: { tabId: tab.id }, files: ["content-utils.js", "content.js"] }, expect.any(Function)
       );
     });
 
@@ -166,7 +166,7 @@ describe("background.js", () => {
       onUpdatedCallback(tab.id, { status: "complete" }, tab);
       expect(console.log).toHaveBeenCalledWith("Auto injecting content script for", expectedOriginPattern);
       expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
-        { target: { tabId: tab.id }, files: ["content-utils-browser.js", "content.js"] }, expect.any(Function)
+        { target: { tabId: tab.id }, files: ["content-utils.js", "content.js"] }, expect.any(Function)
       );
     });
 

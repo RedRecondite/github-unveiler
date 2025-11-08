@@ -8,7 +8,7 @@
 // the logic of processHovercard with mocked dependencies.
 
 import { jest } from '@jest/globals';
-import { isValidUsername, HOVERCARD_PROCESSED_MARKER } from '../content-utils.js';
+import { isValidUsername, HOVERCARD_PROCESSED_MARKER } from './content-utils.test-helper.js';
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 

@@ -1,0 +1,54 @@
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Run weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  dependency-check:
+    name: Check Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Check for outdated dependencies
+      run: |
+        echo "Checking for outdated npm packages..."
+        npm outdated || true
+
+    - name: Audit dependencies for security vulnerabilities
+      run: |
+        echo "Running npm audit..."
+        npm audit --audit-level=high || {
+          echo "Security vulnerabilities found. Please review and update dependencies."
+          exit 1
+        }
+
+  dependency-review:
+    name: Dependency Review (PRs only)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    # Note: This job requires GitHub Advanced Security to be enabled
+    # For private repos, this is only available with GitHub Enterprise
+    # For public repos, this should work automatically
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Dependency Review
+      continue-on-error: true
+      uses: actions/dependency-review-action@v4
+      with:
+        fail-on-severity: moderate
