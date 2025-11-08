@@ -95,9 +95,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 function injectContentScript(tabId) {
+  // Inject content-utils.js first to make utility functions available
   chrome.scripting.executeScript({
     target: { tabId: tabId },
-    files: ["content.js"]
+    files: ["content-utils.js", "content.js"]
   }, () => {
     if (chrome.runtime.lastError) {
       console.error("Script injection failed:", chrome.runtime.lastError);

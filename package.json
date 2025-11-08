@@ -1,12 +1,14 @@
 {
+  "type": "module",
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^30.0.2"
   },
   "jest": {
-    "testEnvironment": "jest-environment-jsdom"
+    "testEnvironment": "jest-environment-jsdom",
+    "transform": {}
   },
   "scripts": {
-    "test": "jest"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   }
 }
