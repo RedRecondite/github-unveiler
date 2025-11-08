@@ -302,13 +302,14 @@
       }
     });
 
+    // Mark processed even if we didn't replace any names, to prevent checking this node over-and-over.
+    msgEl.setAttribute(PROCESSED_MARKER, 'true');
+
     // If we resolved at least one name, rebuild the message
     // Otherwise leave the original untouched
     if (resolvedNames.length > 0) {
       msgEl.textContent = LEADING_PHRASE + ':  ' + resolvedNames.join(' - ');
     } else return;
-
-    msgEl.setAttribute(PROCESSED_MARKER, 'true');
   }
 
   function processMultiUserGridCell(root) {
