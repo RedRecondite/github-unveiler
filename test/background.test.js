@@ -1,4 +1,8 @@
 // background.test.js
+// REFACTORED TEST FILE
+// Converted to ES6 modules to work with package.json "type": "module"
+
+import { jest } from '@jest/globals';
 
 // We assume background.js is in the same folder.
 // The tests below reset the module and set up our own global.chrome mocks.
@@ -12,7 +16,7 @@ describe("background.js", () => {
   // For Date.now mocking
   let originalDateNow;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset modules so that background.js re‑registers its listeners with our mocks.
     jest.resetModules();
 
@@ -90,9 +94,9 @@ describe("background.js", () => {
     Date.now = jest.fn(() => new Date('2023-01-15T12:00:00.000Z').getTime()); // Default mock time
 
 
-    // Require the background script. clearOldCacheEntries is async.
+    // Import the background script. clearOldCacheEntries is async.
     // Tests need to handle this. The `triggerAndAwaitClearOldCache` helper will be used.
-    require("../background.js");
+    await import("../background.js");
   });
 
   afterEach(() => {
@@ -124,7 +128,7 @@ describe("background.js", () => {
       expect(console.log).toHaveBeenCalledWith("Requesting permission for", expectedOriginPattern);
       expect(console.log).toHaveBeenCalledWith("Permission granted for", expectedOriginPattern);
       expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
-        { target: { tabId: tab.id }, files: ["content.js"] }, expect.any(Function)
+        { target: { tabId: tab.id }, files: ["content-utils-browser.js", "content.js"] }, expect.any(Function)
       );
     });
 
@@ -162,7 +166,7 @@ describe("background.js", () => {
       onUpdatedCallback(tab.id, { status: "complete" }, tab);
       expect(console.log).toHaveBeenCalledWith("Auto injecting content script for", expectedOriginPattern);
       expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
-        { target: { tabId: tab.id }, files: ["content.js"] }, expect.any(Function)
+        { target: { tabId: tab.id }, files: ["content-utils-browser.js", "content.js"] }, expect.any(Function)
       );
     });
 
@@ -299,7 +303,7 @@ describe("background.js", () => {
     // Helper to re-require background.js and wait for clearOldCacheEntries to complete
     async function triggerAndAwaitClearOldCache() {
         jest.resetModules(); // This is key to re-run top-level code in background.js
-        const clearPromise = new Promise(resolve => {
+        const clearPromise = new Promise(async (resolve) => {
             // Temporarily override set to know when clearOldCacheEntries's set call is done
             const originalStorageSet = global.chrome.storage.local.set;
             global.chrome.storage.local.set = jest.fn((data, cb) => {
@@ -321,7 +325,7 @@ describe("background.js", () => {
                 cb(result);
             });
 
-            require("../background.js"); // Executes clearOldCacheEntries
+            await import("../background.js"); // Executes clearOldCacheEntries
             // Restore original set immediately if background.js doesn't make further set calls
             // or if clearOldCacheEntries is synchronous in its set call.
             // Given it's async, this resolve in the mock is better.

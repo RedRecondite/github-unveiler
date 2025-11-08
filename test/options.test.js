@@ -1,4 +1,8 @@
 // test/options.test.js
+// REFACTORED TEST FILE
+// Converted to ES6 modules to work with package.json "type": "module"
+
+import { jest } from '@jest/globals';
 
 const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -35,7 +39,7 @@ describe('options.js', () => {
   let initialTimestamp;
   let optionsScriptMainFunction;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
     initialTimestamp = Date.now() - 10 * 24 * 60 * 60 * 1000;
 
@@ -83,7 +87,7 @@ describe('options.js', () => {
       if (type === 'DOMContentLoaded') capturedDOMContentLoadedCallback = listener;
       else originalAddEventListener(type, listener);
     };
-    require('../options.js');
+    await import('../options.js');
     document.addEventListener = originalAddEventListener;
     optionsScriptMainFunction = capturedDOMContentLoadedCallback;
     expect(optionsScriptMainFunction).not.toBeNull();

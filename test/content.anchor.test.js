@@ -1,4 +1,9 @@
 // test/content.anchor.test.js
+// REFACTORED TEST FILE
+// This test file now imports and uses the ACTUAL updateTextNodes from content-utils.js
+
+import { jest } from '@jest/globals';
+import { updateTextNodes } from '../content-utils.js';
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -10,7 +15,6 @@ describe("Anchor Processing", () => {
   let fetchDisplayName;
   let registerElement;
   let updateElements;
-  let updateTextNodes;
   let processAnchorsByHovercard;
   let getUsername;
 
@@ -100,28 +104,12 @@ describe("Anchor Processing", () => {
       }
       return Promise.resolve({ ok: false, status: 404, text: () => Promise.resolve("Not Found") });
     });
-    
+
+    delete global.location;
     global.location = { hostname: "github.com" }; // Default, can be overridden in tests
 
     // --- Redefinition of content.js functions needed for these tests ---
-    updateTextNodes = (element, username, nameToDisplay) => {
-      const escapedUsername = username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(`(?<!\\w)@?${escapedUsername}(?!\\w)`, "g");
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-      let node;
-      let changed = false;
-      while ((node = walker.nextNode())) {
-        if (node.textContent.includes(nameToDisplay)) continue;
-        const updated = node.textContent.replace(regex, match =>
-          match.startsWith("@") ? `@${nameToDisplay}` : nameToDisplay
-        );
-        if (updated !== node.textContent) {
-          node.textContent = updated;
-          changed = true;
-        }
-      }
-      return changed;
-    };
+    // updateTextNodes is imported from content-utils.js
 
     updateElements = (username) => {
       const callbacks = elementsByUsername[username];

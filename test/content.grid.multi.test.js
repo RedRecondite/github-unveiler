@@ -1,4 +1,9 @@
 // content.grid.multi.test.js
+// REFACTORED TEST FILE
+// This test file now imports and uses the ACTUAL updateTextNodes from content-utils.js
+
+import { jest } from '@jest/globals';
+import { updateTextNodes } from '../content-utils.js';
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -10,7 +15,6 @@ describe("Grid Cell Processing - Multi User", () => {
   let fetchDisplayName;
   let registerElement;
   let updateElements;
-  let updateTextNodes;
   let processMultiUserGridCell; // Specific function for this test suite
 
   const PROCESSED_MARKER = "data-ghu-processed";
@@ -71,26 +75,10 @@ describe("Grid Cell Processing - Multi User", () => {
       },
     };
     global.fetch = jest.fn();
+    delete global.location;
     global.location = { hostname: "github.com" };
 
-    updateTextNodes = (element, username, nameToDisplay) => {
-      const escapedUsername = username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(`(?<!\\w)@?${escapedUsername}(?!\\w)`, "gi");
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-      let node;
-      let changed = false;
-      while ((node = walker.nextNode())) {
-        if (node.textContent.includes(nameToDisplay) && !node.textContent.match(regex) ) continue; // only skip if name is there AND old username isn't
-        const updated = node.textContent.replace(regex, match =>
-          match.startsWith("@") ? `@${nameToDisplay}` : nameToDisplay
-        );
-        if (updated !== node.textContent) {
-          node.textContent = updated;
-          changed = true;
-        }
-      }
-      return changed;
-    };
+    // updateTextNodes is imported from content-utils.js
 
     updateElements = (username) => {
       const callbacks = elementsByUsername[username];

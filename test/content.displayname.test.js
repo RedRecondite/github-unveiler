@@ -1,37 +1,10 @@
 // test/content.displayname.test.js
+//
+// REFACTORED TEST FILE
+// This test file now imports and tests the ACTUAL code from content-utils.js
+// instead of duplicating the implementation.
 
-// Duplicated from content.js for testing purposes
-function parseDisplayNameFormat(displayName, enabled) {
-  if (!enabled || !displayName) {
-    return displayName;
-  }
-
-  // Count occurrences of comma, open-paren, and close-paren
-  const commaCount = (displayName.match(/,/g) || []).length;
-  const openParenCount = (displayName.match(/\(/g) || []).length;
-  const closeParenCount = (displayName.match(/\)/g) || []).length;
-
-  // Only proceed if exactly one of each
-  if (commaCount !== 1 || openParenCount !== 1 || closeParenCount !== 1) {
-    return displayName;
-  }
-
-  // Match the pattern: "LastName, FirstName (Something)"
-  // This regex captures:
-  // - Group 1: LastName (can include spaces)
-  // - Group 2: FirstName (can include spaces)
-  // - Group 3: Content in parentheses (optional capture for validation)
-  const pattern = /^([^,]+),\s*([^(]+)\s*\([^)]+\)\s*$/;
-  const match = displayName.match(pattern);
-
-  if (match) {
-    const lastName = match[1].trim();
-    const firstName = match[2].trim();
-    return `${firstName} ${lastName}`;
-  }
-
-  return displayName;
-}
+import { parseDisplayNameFormat } from '../content-utils.js';
 
 // --- Tests Start Here ---
 describe('parseDisplayNameFormat', () => {
