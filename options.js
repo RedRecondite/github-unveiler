@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const settings = result.githubUnveilerSettings || {};
         parseDisplayNameFormatCheckbox.checked = settings.parseDisplayNameFormat || false;
-        replaceCodeOwnerMergingIsBlockedCheckbox.checked = settings.replaceCodeOwnerMergingIsBlockedCheckbox || false;
+        replaceCodeOwnerMergingIsBlockedCheckbox.checked = settings.replaceCodeOwnerMergingIsBlocked || false;
       });
     } else {
       console.warn('chrome.storage API not available.');
