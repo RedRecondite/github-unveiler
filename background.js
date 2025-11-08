@@ -37,14 +37,17 @@ async function clearOldCacheEntries() {
   }
 }
 
-// Invoke cache clearing when the background script loads.
-clearOldCacheEntries().catch((err) => {
-  console.error("Error clearing old cache entries:", err);
-});
+// Invoke cache clearing when the background script loads (skip in test environment).
+if (typeof chrome !== 'undefined' && chrome.storage) {
+  clearOldCacheEntries().catch((err) => {
+    console.error("Error clearing old cache entries:", err);
+  });
+}
 
 // --- Browser Action & Content Script Injection ---
 
-chrome.action.onClicked.addListener((tab) => {
+if (typeof chrome !== 'undefined' && chrome.action) {
+  chrome.action.onClicked.addListener((tab) => {
   if (!tab.url) {
     console.error("No URL found for the active tab.");
     return;
@@ -70,29 +73,32 @@ chrome.action.onClicked.addListener((tab) => {
       console.log("Permission denied for", originPattern);
     }
   });
-});
+  });
+}
 
 // Listen for tab updates to auto-inject the content script when permission is already granted.
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // Only proceed when the tab is fully loaded.
-  if (changeInfo.status === "complete" && tab.url) {
-    let url;
-    try {
-      url = new URL(tab.url);
-    } catch (e) {
-      return;
-    }
-    const originPattern = `${url.protocol}//${url.hostname}/*`;
-    chrome.permissions.contains({ origins: [originPattern] }, (hasPermission) => {
-      if (hasPermission) {
-        console.log("Auto injecting content script for", originPattern);
-        injectContentScript(tabId);
-      } else {
-        console.log("No permission for", originPattern, "; content script not injected.");
+if (typeof chrome !== 'undefined' && chrome.tabs) {
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    // Only proceed when the tab is fully loaded.
+    if (changeInfo.status === "complete" && tab.url) {
+      let url;
+      try {
+        url = new URL(tab.url);
+      } catch (e) {
+        return;
       }
-    });
-  }
-});
+      const originPattern = `${url.protocol}//${url.hostname}/*`;
+      chrome.permissions.contains({ origins: [originPattern] }, (hasPermission) => {
+        if (hasPermission) {
+          console.log("Auto injecting content script for", originPattern);
+          injectContentScript(tabId);
+        } else {
+          console.log("No permission for", originPattern, "; content script not injected.");
+        }
+      });
+    }
+  });
+}
 
 function injectContentScript(tabId) {
   // Inject content-utils.js first to make utility functions available
@@ -110,34 +116,36 @@ function injectContentScript(tabId) {
 
 // --- Lock Manager & Cache Update ---
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "acquireLock") {
-    // Only one fetch per origin+username.
-    const key = message.origin + message.username;
-    if (!nameLocks[key]) {
-      nameLocks[key] = true;
-      sendResponse({ acquired: true });
-    } else {
-      sendResponse({ acquired: false });
+if (typeof chrome !== 'undefined' && chrome.runtime) {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === "acquireLock") {
+      // Only one fetch per origin+username.
+      const key = message.origin + message.username;
+      if (!nameLocks[key]) {
+        nameLocks[key] = true;
+        sendResponse({ acquired: true });
+      } else {
+        sendResponse({ acquired: false });
+      }
+    } else if (message.type === "releaseLock") {
+      updateCache(message.origin, message.username, message.displayName)
+        .then(() => {
+          const key = message.origin + message.username;
+          delete nameLocks[key];
+          sendResponse({ success: true });
+        })
+        .catch((err) => {
+          console.error("Error updating cache:", err);
+          sendResponse({ success: false, error: err.toString() });
+        });
+      // Indicate that we'll send a response asynchronously.
+      return true;
+    } else if (message.type === "openOptionsPage") {
+      chrome.tabs.create({ url: chrome.runtime.getURL(message.url) });
+      sendResponse({ success: true });
     }
-  } else if (message.type === "releaseLock") {
-    updateCache(message.origin, message.username, message.displayName)
-      .then(() => {
-        const key = message.origin + message.username;
-        delete nameLocks[key];
-        sendResponse({ success: true });
-      })
-      .catch((err) => {
-        console.error("Error updating cache:", err);
-        sendResponse({ success: false, error: err.toString() });
-      });
-    // Indicate that we'll send a response asynchronously.
-    return true;
-  } else if (message.type === "openOptionsPage") {
-    chrome.tabs.create({ url: chrome.runtime.getURL(message.url) });
-    sendResponse({ success: true });
-  }
-});
+  });
+}
 
 // Helper: Get the cache from chrome.storage.local.
 function getCache() {
@@ -174,3 +182,6 @@ async function updateCache(origin, username, displayName) {
   });
   return cacheLock;
 }
+
+// Export for ES6 module compatibility in tests (doesn't affect browser usage as service worker)
+export {};

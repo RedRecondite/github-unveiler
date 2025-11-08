@@ -393,3 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadNameReplacements();
   loadSettings();
 });
+
+// Export for ES6 module compatibility in tests (doesn't affect browser usage)
+export {};
