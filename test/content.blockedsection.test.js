@@ -1,72 +1,62 @@
 // Test suite for processBlockedSectionMessages function
+//
+// REFACTORED TEST FILE
+// This test file now imports and uses the ACTUAL parseDisplayNameFormat from content-utils.js
+// instead of duplicating the implementation.
+
+import { jest } from '@jest/globals';
+import { parseDisplayNameFormat } from '../content-utils.js';
+
 describe('GitHub Usernames Extension - processBlockedSectionMessages Functionality', () => {
-  // Mock location FIRST, before anything else
-  global.location = { hostname: 'github.com' };
-
-  // Mock chrome APIs
-  global.chrome = {
-    storage: {
-      local: {
-        get: jest.fn().mockResolvedValue({}),
-        set: jest.fn().mockResolvedValue(),
-      },
-    },
-  };
-
   // Mock content.js global variables and functions
   const testGlobals = {
     displayNames: {},
     PROCESSED_MARKER: "data-ghu-processed",
-    getSettings: jest.fn(),
-    getCache: jest.fn(),
-    parseDisplayNameFormat: jest.fn(),
+    getSettings: null,
+    getCache: null,
+    parseDisplayNameFormat: null,
     location: { hostname: 'github.com' }
   };
 
   let processBlockedSectionMessages;
 
-  // Helper function for parseDisplayNameFormat implementation
-  const parseDisplayNameFormatImpl = (displayName, enabled) => {
-    if (!enabled || !displayName) return displayName;
-    
-    const commaCount = (displayName.match(/,/g) || []).length;
-    const openParenCount = (displayName.match(/\(/g) || []).length;
-    const closeParenCount = (displayName.match(/\)/g) || []).length;
-
-    if (commaCount !== 1 || openParenCount !== 1 || closeParenCount !== 1) {
-      return displayName;
-    }
-
-    const pattern = /^([^,]+),\s*([^(]+)\s*\([^)]+\)\s*$/;
-    const match = displayName.match(pattern);
-
-    if (match) {
-      const lastName = match[1].trim();
-      const firstName = match[2].trim();
-      return `${firstName} ${lastName}`;
-    }
-
-    return displayName;
-  };
-
   // Helper function to create a mock blocked section DOM element
   function createMockBlockedSection(messageText = 'Waiting on code owner review from @user1 @user2') {
     const section = document.createElement('div');
     section.setAttribute('aria-label', 'Merging is blocked');
-    
+
     const msgEl = document.createElement('div');
     msgEl.className = 'BlockedSectionMessage-module_text';
     msgEl.textContent = messageText;
-    
+
     section.appendChild(msgEl);
     document.body.appendChild(section);
-    
+
     return { section, msgEl };
   }
 
   beforeAll(() => {
-    // Set up mock implementation for parseDisplayNameFormat
-    testGlobals.parseDisplayNameFormat.mockImplementation(parseDisplayNameFormatImpl);
+    // Mock location - delete and redefine to avoid JSDOM navigation issues
+    delete global.location;
+    global.location = { hostname: 'github.com' };
+
+    // Mock chrome APIs
+    global.chrome = {
+      storage: {
+        local: {
+          get: jest.fn().mockResolvedValue({}),
+          set: jest.fn().mockResolvedValue(),
+        },
+      },
+    };
+
+    // Initialize testGlobals functions
+    testGlobals.getSettings = jest.fn();
+    testGlobals.getCache = jest.fn();
+    testGlobals.parseDisplayNameFormat = jest.fn();
+
+    // Use the REAL parseDisplayNameFormat function from content-utils.js
+    testGlobals.parseDisplayNameFormat.mockImplementation(parseDisplayNameFormat);
 
     // Define processBlockedSectionMessages for testing
     processBlockedSectionMessages = async function(root) {
@@ -137,20 +127,21 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
   beforeEach(() => {
     // Clear the displayNames object properties instead of reassigning
     Object.keys(testGlobals.displayNames).forEach(key => delete testGlobals.displayNames[key]);
-    
+
     // Reset mock implementations and restore them
     testGlobals.getSettings.mockClear();
     testGlobals.getSettings.mockResolvedValue({
       replaceCodeOwnerMergingIsBlocked: true,
       parseDisplayNameFormat: false
     });
-    
+
     testGlobals.getCache.mockClear();
     testGlobals.getCache.mockResolvedValue({});
-    
+
     testGlobals.parseDisplayNameFormat.mockClear();
-    testGlobals.parseDisplayNameFormat.mockImplementation(parseDisplayNameFormatImpl);
-    
+    // Use the REAL parseDisplayNameFormat function from content-utils.js
+    testGlobals.parseDisplayNameFormat.mockImplementation(parseDisplayNameFormat);
+
     chrome.storage.local.get.mockClear();
     document.body.innerHTML = '';
   });
@@ -173,7 +164,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     });
 
     const { section, msgEl } = createMockBlockedSection('Waiting on code owner review from @user1 @user2');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.hasAttribute(testGlobals.PROCESSED_MARKER)).toBe(true);
@@ -188,7 +179,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
 
     const originalText = 'Waiting on code owner review from @user1';
     const { section, msgEl } = createMockBlockedSection(originalText);
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.hasAttribute(testGlobals.PROCESSED_MARKER)).toBe(false);
@@ -205,7 +196,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
 
     const originalText = 'Waiting on code owner review from @user1';
     const { section, msgEl } = createMockBlockedSection(originalText);
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.hasAttribute(testGlobals.PROCESSED_MARKER)).toBe(true);
@@ -225,7 +216,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     });
 
     const { section, msgEl } = createMockBlockedSection('Waiting on code owner review from @user1');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(testGlobals.parseDisplayNameFormat).toHaveBeenCalledWith('Doe, John (Engineering)', true);
@@ -240,7 +231,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
 
     const originalText = 'This is some other message about @user1';
     const { section, msgEl } = createMockBlockedSection(originalText);
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.hasAttribute(testGlobals.PROCESSED_MARKER)).toBe(true);
@@ -261,7 +252,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     });
 
     const { section, msgEl } = createMockBlockedSection('Waiting on code owner review from @user1 @user2');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.textContent).toBe('Waiting on code owner review from:  User One - User Two');
@@ -281,7 +272,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     });
 
     const { section, msgEl } = createMockBlockedSection('Waiting on code owner review from user1 user2');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.textContent).toBe('Waiting on code owner review from:  User One - User Two');
@@ -301,7 +292,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     });
 
     const { section, msgEl } = createMockBlockedSection('Waiting on code owner review from @user1 user2');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.textContent).toBe('Waiting on code owner review from:  User One - User Two');
@@ -314,7 +305,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     });
 
     testGlobals.displayNames['user1'] = 'Memory User';
-    
+
     testGlobals.getCache.mockResolvedValue({
       'github.com': {
         'user1': { displayName: 'Server User', timestamp: Date.now() }
@@ -322,7 +313,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     });
 
     const { section, msgEl } = createMockBlockedSection('Waiting on code owner review from @user1');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.textContent).toBe('Waiting on code owner review from:  Memory User');
@@ -337,7 +328,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     const originalText = 'Waiting on code owner review from @user1';
     const { section, msgEl } = createMockBlockedSection(originalText);
     msgEl.setAttribute(testGlobals.PROCESSED_MARKER, 'true');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.textContent).toBe(originalText); // Text unchanged
@@ -351,7 +342,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
 
     const div = document.createElement('div');
     document.body.appendChild(div);
-    
+
     await processBlockedSectionMessages(div);
 
     expect(testGlobals.getSettings).toHaveBeenCalled();
@@ -366,7 +357,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     const section = document.createElement('div');
     section.setAttribute('aria-label', 'Merging is blocked');
     document.body.appendChild(section);
-    
+
     await processBlockedSectionMessages(section);
 
     expect(testGlobals.getSettings).toHaveBeenCalled();
@@ -386,7 +377,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     });
 
     const { section, msgEl } = createMockBlockedSection('Waiting on code owner review from @user1 @user2 @user1');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.textContent).toBe('Waiting on code owner review from:  User One - User Two');
@@ -405,7 +396,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     });
 
     const { section, msgEl } = createMockBlockedSection('Waiting on code owner review from @user1');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.textContent).toBe('Waiting on code owner review from:  User One');
@@ -418,7 +409,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     });
 
     const { section, msgEl } = createMockBlockedSection('Waiting on code owner review from');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.hasAttribute(testGlobals.PROCESSED_MARKER)).toBe(true);
@@ -434,7 +425,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     testGlobals.getCache.mockRejectedValue(new Error('Cache read error'));
 
     const { section, msgEl } = createMockBlockedSection('Waiting on code owner review from @user1');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.hasAttribute(testGlobals.PROCESSED_MARKER)).toBe(true);
@@ -453,7 +444,7 @@ describe('GitHub Usernames Extension - processBlockedSectionMessages Functionali
     });
 
     const { section, msgEl } = createMockBlockedSection('Waiting on code owner review from @user1');
-    
+
     await processBlockedSectionMessages(section);
 
     expect(msgEl.textContent).toBe('Waiting on code owner review from:  User One');
