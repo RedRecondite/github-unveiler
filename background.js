@@ -184,6 +184,3 @@ async function updateCache(origin, username, displayName) {
   });
   return cacheLock;
 }
-
-// Export for ES6 module compatibility in tests (doesn't affect browser usage as service worker)
-export {};
