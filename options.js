@@ -318,6 +318,11 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error: parseDisplayNameFormatCheckbox element not found.');
       return;
     }
+    const replaceCodeOwnerMergingIsBlockedCheckbox = document.getElementById('replaceCodeOwnerMergingIsBlockedCheckbox');
+    if (!replaceCodeOwnerMergingIsBlockedCheckbox) {
+      console.error('Error: replaceCodeOwnerMergingIsBlockedCheckbox element not found.');
+      return;
+    }
 
     if (chrome && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get(['githubUnveilerSettings'], result => {
@@ -327,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const settings = result.githubUnveilerSettings || {};
         parseDisplayNameFormatCheckbox.checked = settings.parseDisplayNameFormat || false;
+        replaceCodeOwnerMergingIsBlockedCheckbox.checked = settings.replaceCodeOwnerMergingIsBlockedCheckbox || false;
       });
     } else {
       console.warn('chrome.storage API not available.');
@@ -335,16 +341,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveSettings() {
     const parseDisplayNameFormatCheckbox = document.getElementById('parseDisplayNameFormatCheckbox');
-    const settingsSavedIndicator = document.getElementById('settingsSaved');
-
     if (!parseDisplayNameFormatCheckbox) {
       console.error('Error: parseDisplayNameFormatCheckbox element not found.');
+      return;
+    }
+    const replaceCodeOwnerMergingIsBlockedCheckbox = document.getElementById('replaceCodeOwnerMergingIsBlockedCheckbox');
+    if (!replaceCodeOwnerMergingIsBlockedCheckbox) {
+      console.error('Error: replaceCodeOwnerMergingIsBlockedCheckbox element not found.');
       return;
     }
 
     if (chrome && chrome.storage && chrome.storage.local) {
       const settings = {
-        parseDisplayNameFormat: parseDisplayNameFormatCheckbox.checked
+        parseDisplayNameFormat: parseDisplayNameFormatCheckbox.checked,
+        replaceCodeOwnerMergingIsBlocked: replaceCodeOwnerMergingIsBlockedCheckbox.checked
       };
 
       chrome.storage.local.set({ githubUnveilerSettings: settings }, () => {
@@ -355,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Show saved indicator
+        const settingsSavedIndicator = document.getElementById('settingsSaved');
         if (settingsSavedIndicator) {
           settingsSavedIndicator.style.display = 'block';
           setTimeout(() => {
@@ -371,6 +382,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const parseDisplayNameFormatCheckbox = document.getElementById('parseDisplayNameFormatCheckbox');
   if (parseDisplayNameFormatCheckbox) {
     parseDisplayNameFormatCheckbox.addEventListener('change', saveSettings);
+  }
+
+  const replaceCodeOwnerMergingIsBlockedCheckbox = document.getElementById('replaceCodeOwnerMergingIsBlockedCheckbox');
+  if (replaceCodeOwnerMergingIsBlockedCheckbox) {
+    replaceCodeOwnerMergingIsBlockedCheckbox.addEventListener('change', saveSettings);
   }
 
   loadEnabledDomains();

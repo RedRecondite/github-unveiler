@@ -241,6 +241,12 @@
   async function processBlockedSectionMessages(root) { // now uses cache only, no direct refetch
     if (!(root instanceof Element)) return;
 
+    // Check feature flag first
+    const settings = await getSettings();
+    if (!settings.replaceCodeOwnerMergingIsBlocked) {
+      return;
+    }
+
     const section = root.matches('[aria-label="Merging is blocked"]')
       ? root
       : root.querySelector('[aria-label="Merging is blocked"]');
