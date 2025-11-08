@@ -289,7 +289,7 @@
       // Prefer cache/displayNames only (no re-fetching).
       const display =
         displayNames[candidate] ||
-        (serverCache[candidate] && serverCache[candidate].displayName);
+        (serverCache[candidate] && parseDisplayNameFormat(serverCache[candidate].displayName, settings.parseDisplayNameFormat));
       if (display) {
         // Strip any accidental leading phrase prefix inside cached display
         const cleanDisplay = display.startsWith(LEADING_PHRASE)
