@@ -1,0 +1,28 @@
+# Configuration for PR labeler
+# Labels PRs based on changed files
+
+tests:
+  - test/**/*
+
+documentation:
+  - '*.md'
+  - docs/**/*
+
+dependencies:
+  - package.json
+  - package-lock.json
+
+github-actions:
+  - .github/workflows/**/*
+
+extension-core:
+  - manifest.json
+  - background.js
+  - content.js
+  - content-utils.js
+  - content-utils-browser.js
+
+ui:
+  - options.html
+  - options.js
+  - '*.png'
