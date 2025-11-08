@@ -11,6 +11,12 @@
  * When loaded as an ES6 module (in tests), functions are exported.
  */
 
+// Guard against multiple injections - if already loaded, skip re-initialization
+if (typeof window !== 'undefined' && window.PROCESSED_MARKER) {
+  // Already loaded, exit early
+  console.log("content-utils-browser.js already loaded, skipping re-initialization");
+} else {
+
 /**
  * Marker attribute for processed elements
  */
@@ -239,3 +245,5 @@ if (typeof window !== 'undefined') {
   window.getUsername = getUsername;
   window.updateTextNodes = updateTextNodes;
 }
+
+} // End of guard against multiple injections
