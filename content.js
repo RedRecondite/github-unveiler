@@ -15,7 +15,8 @@
   // ------------------------------
   // Global Variables & Cache Setup
   // ------------------------------
-  const PROCESSED_MARKER = "data-ghu-processed";
+  // Use PROCESSED_MARKER from window (set by content-utils.js)
+  const PROCESSED_MARKER = window.PROCESSED_MARKER;
   const CACHE_KEY = "githubDisplayNameCache";
   const SETTINGS_KEY = "githubUnveilerSettings";
   const displayNames = {}; // username => fetched display name
@@ -576,7 +577,8 @@
   // DOM Processing Functions
   // ------------------------------
 
-  const HOVERCARD_PROCESSED_MARKER = "data-ghu-hovercard-processed";
+  // Use HOVERCARD_PROCESSED_MARKER from window (set by content-utils.js)
+  const HOVERCARD_PROCESSED_MARKER = window.HOVERCARD_PROCESSED_MARKER;
 
   function processHovercard(hovercardElement) {
     if (hovercardElement.hasAttribute(HOVERCARD_PROCESSED_MARKER)) {
