@@ -5,7 +5,7 @@
 // instead of duplicating the implementation.
 
 import { jest } from '@jest/globals';
-import { parseDisplayNameFormat } from '../content-utils.js';
+import { parseDisplayNameFormat } from './content-utils.test-helper.js';
 
 describe('GitHub Usernames Extension - processBlockedSectionMessages Functionality', () => {
   // Mock content.js global variables and functions

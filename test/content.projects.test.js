@@ -3,7 +3,7 @@
 // This test file now imports and uses the ACTUAL updateTextNodes from content-utils.js
 
 import { jest } from '@jest/globals';
-import { updateTextNodes } from '../content-utils.js';
+import { updateTextNodes } from './content-utils.test-helper.js';
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 

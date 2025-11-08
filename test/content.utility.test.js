@@ -4,7 +4,7 @@
 // This test file now imports and tests the ACTUAL code from content-utils.js
 // instead of duplicating the implementation.
 
-import { isValidUsername, isBotUsername, getUsername, KNOWN_BOT_PATTERNS } from '../content-utils.js';
+import { isValidUsername, isBotUsername, getUsername, KNOWN_BOT_PATTERNS } from './content-utils.test-helper.js';
 
 // --- Tests Start Here ---
 describe('isValidUsername', () => {
