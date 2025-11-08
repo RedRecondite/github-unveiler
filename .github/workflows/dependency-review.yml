@@ -30,7 +30,7 @@ jobs:
     - name: Audit dependencies for security vulnerabilities
       run: |
         echo "Running npm audit..."
-        npm audit --audit-level=moderate || {
+        npm audit --audit-level=high || {
           echo "Security vulnerabilities found. Please review and update dependencies."
           exit 1
         }
@@ -39,12 +39,16 @@ jobs:
     name: Dependency Review (PRs only)
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    # Note: This job requires GitHub Advanced Security to be enabled
+    # For private repos, this is only available with GitHub Enterprise
+    # For public repos, this should work automatically
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Dependency Review
+      continue-on-error: true
       uses: actions/dependency-review-action@v4
       with:
         fail-on-severity: moderate

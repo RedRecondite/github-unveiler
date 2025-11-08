@@ -1,28 +1,38 @@
-# Configuration for PR labeler
+# Configuration for PR labeler (actions/labeler@v5)
 # Labels PRs based on changed files
 
 tests:
-  - test/**/*
+  - changed-files:
+    - any-glob-to-any-file: 'test/**/*'
 
 documentation:
-  - '*.md'
-  - docs/**/*
+  - changed-files:
+    - any-glob-to-any-file: '*.md'
+  - changed-files:
+    - any-glob-to-any-file: 'docs/**/*'
 
 dependencies:
-  - package.json
-  - package-lock.json
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'package.json'
+      - 'package-lock.json'
 
 github-actions:
-  - .github/workflows/**/*
+  - changed-files:
+    - any-glob-to-any-file: '.github/workflows/**/*'
 
 extension-core:
-  - manifest.json
-  - background.js
-  - content.js
-  - content-utils.js
-  - content-utils-browser.js
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'manifest.json'
+      - 'background.js'
+      - 'content.js'
+      - 'content-utils.js'
+      - 'content-utils-browser.js'
 
 ui:
-  - options.html
-  - options.js
-  - '*.png'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'options.html'
+      - 'options.js'
+      - '*.png'
