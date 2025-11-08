@@ -101,10 +101,12 @@ if (typeof chrome !== 'undefined' && chrome.tabs) {
 }
 
 function injectContentScript(tabId) {
-  // Inject content-utils.js first to make utility functions available
+  // Inject content-utils-browser.js first to make utility functions available
+  // Note: content-utils-browser.js is the browser-compatible version without ES6 exports
+  // content-utils.js (with exports) is used by tests only
   chrome.scripting.executeScript({
     target: { tabId: tabId },
-    files: ["content-utils.js", "content.js"]
+    files: ["content-utils-browser.js", "content.js"]
   }, () => {
     if (chrome.runtime.lastError) {
       console.error("Script injection failed:", chrome.runtime.lastError);

@@ -223,13 +223,19 @@ function updateTextNodes(element, username, name) {
 // Export for ES6 module context (tests)
 // ==============================================================================
 
-export {
-  PROCESSED_MARKER,
-  HOVERCARD_PROCESSED_MARKER,
-  isValidUsername,
-  KNOWN_BOT_PATTERNS,
-  isBotUsername,
-  parseDisplayNameFormat,
-  getUsername,
-  updateTextNodes
-};
+// ==============================================================================
+// Make functions available globally for browser context
+// ==============================================================================
+// When this file is injected via chrome.scripting.executeScript, all functions
+// and constants are made available on the window object for use by content.js
+
+if (typeof window !== 'undefined') {
+  window.PROCESSED_MARKER = PROCESSED_MARKER;
+  window.HOVERCARD_PROCESSED_MARKER = HOVERCARD_PROCESSED_MARKER;
+  window.isValidUsername = isValidUsername;
+  window.KNOWN_BOT_PATTERNS = KNOWN_BOT_PATTERNS;
+  window.isBotUsername = isBotUsername;
+  window.parseDisplayNameFormat = parseDisplayNameFormat;
+  window.getUsername = getUsername;
+  window.updateTextNodes = updateTextNodes;
+}
