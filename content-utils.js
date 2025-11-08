@@ -237,18 +237,3 @@ if (typeof window !== 'undefined' && !window.PROCESSED_MARKER) {
   window.updateTextNodes = updateTextNodes;
   console.log("content-utils.js loaded and functions exposed to window");
 }
-
-// ==============================================================================
-// Export for ES6 module context (tests)
-// ==============================================================================
-
-export {
-  PROCESSED_MARKER,
-  HOVERCARD_PROCESSED_MARKER,
-  isValidUsername,
-  KNOWN_BOT_PATTERNS,
-  isBotUsername,
-  parseDisplayNameFormat,
-  getUsername,
-  updateTextNodes
-};
