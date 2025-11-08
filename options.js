@@ -311,6 +311,69 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Load and save settings
+  function loadSettings() {
+    const parseDisplayNameFormatCheckbox = document.getElementById('parseDisplayNameFormatCheckbox');
+    if (!parseDisplayNameFormatCheckbox) {
+      console.error('Error: parseDisplayNameFormatCheckbox element not found.');
+      return;
+    }
+
+    if (chrome && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['githubUnveilerSettings'], result => {
+        if (chrome.runtime.lastError) {
+          console.error('Error loading settings:', chrome.runtime.lastError.message);
+          return;
+        }
+        const settings = result.githubUnveilerSettings || {};
+        parseDisplayNameFormatCheckbox.checked = settings.parseDisplayNameFormat || false;
+      });
+    } else {
+      console.warn('chrome.storage API not available.');
+    }
+  }
+
+  function saveSettings() {
+    const parseDisplayNameFormatCheckbox = document.getElementById('parseDisplayNameFormatCheckbox');
+    const settingsSavedIndicator = document.getElementById('settingsSaved');
+
+    if (!parseDisplayNameFormatCheckbox) {
+      console.error('Error: parseDisplayNameFormatCheckbox element not found.');
+      return;
+    }
+
+    if (chrome && chrome.storage && chrome.storage.local) {
+      const settings = {
+        parseDisplayNameFormat: parseDisplayNameFormatCheckbox.checked
+      };
+
+      chrome.storage.local.set({ githubUnveilerSettings: settings }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error saving settings:', chrome.runtime.lastError.message);
+          alert('Error saving settings. Check console.');
+          return;
+        }
+
+        // Show saved indicator
+        if (settingsSavedIndicator) {
+          settingsSavedIndicator.style.display = 'block';
+          setTimeout(() => {
+            settingsSavedIndicator.style.display = 'none';
+          }, 2000);
+        }
+      });
+    } else {
+      console.warn('chrome.storage API not available.');
+    }
+  }
+
+  // Add event listener for settings checkbox
+  const parseDisplayNameFormatCheckbox = document.getElementById('parseDisplayNameFormatCheckbox');
+  if (parseDisplayNameFormatCheckbox) {
+    parseDisplayNameFormatCheckbox.addEventListener('change', saveSettings);
+  }
+
   loadEnabledDomains();
   loadNameReplacements();
+  loadSettings();
 });

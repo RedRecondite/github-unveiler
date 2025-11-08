@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>GitHub Unveiler Options</title>
   <link rel="stylesheet" type="text/css" href="options.css">
   <style>
@@ -124,6 +125,25 @@
     <ul id="enabledDomainsList">
       <!-- Domains will be listed here by options.js -->
     </ul>
+  </section>
+
+  <section>
+    <h2>Settings</h2>
+    <div style="margin-bottom: 15px;">
+      <label style="display: flex; align-items: center; cursor: pointer;">
+        <input type="checkbox" id="parseDisplayNameFormatCheckbox" style="margin-right: 10px;">
+        <div>
+          <strong>Parse Display Name Format</strong>
+          <div style="font-size: 13px; color: #586069; margin-top: 4px;">
+            Automatically rewrite display names in "LastName, FirstName (Something)" format as "FirstName LastName".
+            Only applies when the name has exactly one comma and one set of parentheses.
+          </div>
+        </div>
+      </label>
+    </div>
+    <div id="settingsSaved" style="color: #28a745; font-size: 13px; margin-top: 10px; display: none;">
+      ✓ Settings saved
+    </div>
   </section>
 
   <section>
