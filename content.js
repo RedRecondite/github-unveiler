@@ -21,21 +21,59 @@
   const displayNames = {}; // username => fetched display name
   const elementsByUsername = {}; // username => array of update callbacks
 
+  // Helper: Check if the extension context is valid
+  function isExtensionContextValid() {
+    try {
+      // chrome.runtime.id becomes undefined when extension context is invalidated
+      return !!(chrome && chrome.runtime && chrome.runtime.id);
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Helper: Get the cache from chrome.storage.local.
   function getCache() {
     return new Promise((resolve) => {
-      chrome.storage.local.get([CACHE_KEY], (result) => {
-        resolve(result[CACHE_KEY] || {});
-      });
+      if (!isExtensionContextValid()) {
+        resolve({});
+        return;
+      }
+      try {
+        chrome.storage.local.get([CACHE_KEY], (result) => {
+          if (chrome.runtime.lastError) {
+            console.warn('Chrome storage error:', chrome.runtime.lastError);
+            resolve({});
+          } else {
+            resolve(result[CACHE_KEY] || {});
+          }
+        });
+      } catch (e) {
+        console.warn('Extension context invalidated in getCache:', e.message);
+        resolve({});
+      }
     });
   }
 
   // Helper: Get the settings from chrome.storage.local.
   function getSettings() {
     return new Promise((resolve) => {
-      chrome.storage.local.get([SETTINGS_KEY], (result) => {
-        resolve(result[SETTINGS_KEY] || {});
-      });
+      if (!isExtensionContextValid()) {
+        resolve({});
+        return;
+      }
+      try {
+        chrome.storage.local.get([SETTINGS_KEY], (result) => {
+          if (chrome.runtime.lastError) {
+            console.warn('Chrome storage error:', chrome.runtime.lastError);
+            resolve({});
+          } else {
+            resolve(result[SETTINGS_KEY] || {});
+          }
+        });
+      } catch (e) {
+        console.warn('Extension context invalidated in getSettings:', e.message);
+        resolve({});
+      }
     });
   }
 
@@ -443,14 +481,30 @@
         return;
       }
 
-      // Request the lock from the background service.
-      const lockResponse = await chrome.runtime.sendMessage({
-        type: "acquireLock",
-        origin: location.hostname,
-        username: username,
-      });
+      // Check if extension context is valid before making runtime calls
+      if (!isExtensionContextValid()) {
+        console.warn('Extension context invalidated, cannot fetch display name for @' + username);
+        displayNames[username] = username;
+        updateElements(username);
+        return;
+      }
 
-      if (lockResponse.acquired) {
+      // Request the lock from the background service.
+      let lockResponse;
+      try {
+        lockResponse = await chrome.runtime.sendMessage({
+          type: "acquireLock",
+          origin: location.hostname,
+          username: username,
+        });
+      } catch (e) {
+        console.warn('Failed to acquire lock for @' + username + ':', e.message);
+        displayNames[username] = username;
+        updateElements(username);
+        return;
+      }
+
+      if (lockResponse && lockResponse.acquired) {
         // We have the lock—fetch the GitHub profile page.
         const profileUrl = `https://${location.hostname}/${username}`;
         const response = await fetch(profileUrl);
@@ -473,12 +527,17 @@
         const parsedDisplayName = parseDisplayNameFormat(displayName, parseEnabled);
 
         // Tell the background to update the cache and release the lock.
-        await chrome.runtime.sendMessage({
-          type: "releaseLock",
-          origin: location.hostname,
-          username: username,
-          displayName: displayName, // Store original in cache
-        });
+        try {
+          await chrome.runtime.sendMessage({
+            type: "releaseLock",
+            origin: location.hostname,
+            username: username,
+            displayName: displayName, // Store original in cache
+          });
+        } catch (e) {
+          console.warn('Failed to release lock for @' + username + ':', e.message);
+          // Continue anyway - we still want to use the display name we fetched
+        }
 
         displayNames[username] = parsedDisplayName; // Use parsed version in memory
         updateElements(username);
@@ -572,7 +631,20 @@
         return;
       }
       // console.log("[GHU HC Debug] processUpdate: Element does not have marker. Proceeding to create row."); // Debug log removed
-      const iconUrl = chrome.runtime.getURL("icon16.png");
+
+      // Check if extension context is valid before using chrome.runtime
+      if (!isExtensionContextValid()) {
+        console.warn('Extension context invalidated, cannot add hovercard for @' + username);
+        return;
+      }
+
+      let iconUrl;
+      try {
+        iconUrl = chrome.runtime.getURL("icon16.png");
+      } catch (e) {
+        console.warn('Failed to get icon URL:', e.message);
+        return;
+      }
       // Removed expirationText definition and logic block
 
       const newRow = document.createElement("div");
@@ -603,7 +675,15 @@
       newRow.appendChild(textContainer);
 
       newRow.addEventListener("click", () => {
-        chrome.runtime.sendMessage({ type: "openOptionsPage", url: `options.html#${username}` });
+        if (!isExtensionContextValid()) {
+          console.warn('Extension context invalidated, cannot open options page');
+          return;
+        }
+        try {
+          chrome.runtime.sendMessage({ type: "openOptionsPage", url: `options.html#${username}` });
+        } catch (e) {
+          console.warn('Failed to open options page:', e.message);
+        }
       });
       // newRow.style.cursor = "pointer"; // Already set above
 
