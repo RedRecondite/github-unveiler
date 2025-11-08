@@ -160,3 +160,51 @@ export function getUsername(anchor) {
   }
   return null; // Return null if not valid or not found
 }
+
+/**
+ * Updates text nodes within an element, replacing username mentions with display names.
+ * Handles both @username and plain username formats.
+ * This function is idempotent - it won't re-replace text that already contains the display name.
+ *
+ * @param {HTMLElement} element The element to search for text nodes
+ * @param {string} username The username to find and replace
+ * @param {string} name The display name to replace with
+ * @returns {boolean} True if any text was changed, false otherwise
+ */
+export function updateTextNodes(element, username, name) {
+  // Escape special regex chars in the username
+  const escapedUsername = username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // Match standalone @username or username (doesn't run inside other words)
+  const regex = new RegExp(`(?<!\\w)@?${escapedUsername}(?!\\w)`, "g");
+
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false
+  );
+  let node;
+  let changed = false;
+  while ((node = walker.nextNode())) {
+    // If we've already inserted the full name here, skip it
+    if (node.textContent.includes(name)) {
+      // If the display name is already present, we assume it's fully correct.
+      // This is simpler and might be more robust for cases like TBBle.
+      // However, this means if a username token still exists that *should* be replaced,
+      // and the displayName is also part of another text node, it might be skipped.
+      // The PROCESSED_MARKER should ideally prevent re-entry for the whole element.
+      // This change makes updateTextNodes itself more idempotent if called multiple times
+      // on the same text that already contains the final display name.
+      continue;
+    }
+
+    const updated = node.textContent.replace(regex, (match) =>
+      match.startsWith("@") ? `@${name}` : name
+    );
+    if (updated !== node.textContent) {
+      node.textContent = updated;
+      changed = true;
+    }
+  }
+  return changed;
+}

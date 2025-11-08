@@ -397,43 +397,7 @@
    * Walk all text nodes under `element`, replace @username or username tokens
    * with the userData—but skip any node that already contains the full userData.
    */
-  function updateTextNodes(element, username, name) { // displayName parameter changed to name
-    // Escape special regex chars in the username
-    const escapedUsername = username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    // Match standalone @username or username (doesn't run inside other words)
-    const regex = new RegExp(`(?<!\\w)@?${escapedUsername}(?!\\w)`, "g");
-
-    const walker = document.createTreeWalker(
-      element,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
-    );
-    let node;
-    let changed = false;
-    while ((node = walker.nextNode())) {
-      // If we've already inserted the full name here, skip it
-      if (node.textContent.includes(name)) { // check against name
-        // If the display name is already present, we assume it's fully correct.
-        // This is simpler and might be more robust for cases like TBBle.
-        // However, this means if a username token still exists that *should* be replaced,
-        // and the displayName is also part of another text node, it might be skipped.
-        // The PROCESSED_MARKER should ideally prevent re-entry for the whole element.
-        // This change makes updateTextNodes itself more idempotent if called multiple times
-        // on the same text that already contains the final display name.
-        continue;
-      }
-
-      const updated = node.textContent.replace(regex, (match) =>
-        match.startsWith("@") ? `@${name}` : name // use name
-      );
-      if (updated !== node.textContent) {
-        node.textContent = updated;
-        changed = true;
-      }
-    }
-    return changed;
-  }
+  // updateTextNodes is imported from content-utils.js
 
   // ------------------------------
   // Fetching & Caching Display Names
