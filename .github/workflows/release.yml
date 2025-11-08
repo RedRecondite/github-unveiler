@@ -55,7 +55,7 @@ jobs:
           manifest.json \
           background.js \
           content.js \
-          content-utils-browser.js \
+          content-utils.js \
           options.js \
           options.html \
           icon16.png \

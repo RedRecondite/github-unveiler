@@ -184,7 +184,7 @@ github-unveiler-X.X.X.zip
 ├── manifest.json
 ├── background.js
 ├── content.js
-├── content-utils-browser.js
+├── content-utils.js
 ├── options.js
 ├── options.html
 ├── icon*.png (all sizes)
@@ -285,9 +285,10 @@ If you need to rollback a release:
 
 ### Files
 
-- **Browser-compatible code**: Use `content-utils-browser.js` (no ES6 modules)
-- **Test code**: Import from `content-utils.js` (ES6 modules)
-- **Content scripts**: Load `content-utils-browser.js` in manifest.json
+- **Utility functions**: `content-utils.js` works in both browser and test contexts
+  - Loaded as a script in the extension (functions exposed to window)
+  - Imported as ES6 module in tests
+- **Content scripts**: Load `content-utils.js` via background.js injection
 
 ### Testing
 
