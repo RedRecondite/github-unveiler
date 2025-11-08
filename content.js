@@ -1061,7 +1061,7 @@
     nodesToProcess.clear();
   }
 
-  const observer = new MutationObserver((mutations) => {
+  const observer = new MutationObserver(async (mutations) => {
     let addedRelevantNode = false;
     for (const mutation of mutations) {
       mutation.addedNodes.forEach((node) => {
@@ -1076,8 +1076,16 @@
     }
 
     if (addedRelevantNode) {
-      clearTimeout(debounceTimeout);
-      debounceTimeout = setTimeout(processCollectedNodes, DEBOUNCE_DELAY);
+      // Check if debounce logic should be skipped
+      const settings = await getSettings();
+      if (settings.skipDebounceLogic) {
+        // Process immediately without debounce
+        processCollectedNodes();
+      } else {
+        // Use debounce logic
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(processCollectedNodes, DEBOUNCE_DELAY);
+      }
     }
   });
 

@@ -323,6 +323,11 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error: replaceCodeOwnerMergingIsBlockedCheckbox element not found.');
       return;
     }
+    const skipDebounceLogicCheckbox = document.getElementById('skipDebounceLogicCheckbox');
+    if (!skipDebounceLogicCheckbox) {
+      console.error('Error: skipDebounceLogicCheckbox element not found.');
+      return;
+    }
 
     if (chrome && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get(['githubUnveilerSettings'], result => {
@@ -333,6 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const settings = result.githubUnveilerSettings || {};
         parseDisplayNameFormatCheckbox.checked = settings.parseDisplayNameFormat || false;
         replaceCodeOwnerMergingIsBlockedCheckbox.checked = settings.replaceCodeOwnerMergingIsBlocked || false;
+        skipDebounceLogicCheckbox.checked = settings.skipDebounceLogic || false;
       });
     } else {
       console.warn('chrome.storage API not available.');
@@ -350,11 +356,17 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error: replaceCodeOwnerMergingIsBlockedCheckbox element not found.');
       return;
     }
+    const skipDebounceLogicCheckbox = document.getElementById('skipDebounceLogicCheckbox');
+    if (!skipDebounceLogicCheckbox) {
+      console.error('Error: skipDebounceLogicCheckbox element not found.');
+      return;
+    }
 
     if (chrome && chrome.storage && chrome.storage.local) {
       const settings = {
         parseDisplayNameFormat: parseDisplayNameFormatCheckbox.checked,
-        replaceCodeOwnerMergingIsBlocked: replaceCodeOwnerMergingIsBlockedCheckbox.checked
+        replaceCodeOwnerMergingIsBlocked: replaceCodeOwnerMergingIsBlockedCheckbox.checked,
+        skipDebounceLogic: skipDebounceLogicCheckbox.checked
       };
 
       chrome.storage.local.set({ githubUnveilerSettings: settings }, () => {
@@ -387,6 +399,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const replaceCodeOwnerMergingIsBlockedCheckbox = document.getElementById('replaceCodeOwnerMergingIsBlockedCheckbox');
   if (replaceCodeOwnerMergingIsBlockedCheckbox) {
     replaceCodeOwnerMergingIsBlockedCheckbox.addEventListener('change', saveSettings);
+  }
+
+  const skipDebounceLogicCheckbox = document.getElementById('skipDebounceLogicCheckbox');
+  if (skipDebounceLogicCheckbox) {
+    skipDebounceLogicCheckbox.addEventListener('change', saveSettings);
   }
 
   loadEnabledDomains();

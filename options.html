@@ -147,7 +147,18 @@
         <div>
           <strong>Code Owner</strong>
           <div style="font-size: 13px; color: #586069; margin-top: 4px;">
-            Applies display names in the “Merging is blocked” message listing code owners that need to approve the PR.
+            Applies display names in the "Merging is blocked" message listing code owners that need to approve the PR.
+          </div>
+        </div>
+      </label>
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: flex; align-items: center; cursor: pointer;">
+        <input type="checkbox" id="skipDebounceLogicCheckbox" style="margin-right: 10px;">
+        <div>
+          <strong>Skip Debounce Logic</strong>
+          <div style="font-size: 13px; color: #586069; margin-top: 4px;">
+            Process name replacements immediately without the 200ms debounce delay. May improve responsiveness but could increase CPU usage on pages with frequent DOM changes.
           </div>
         </div>
       </label>
