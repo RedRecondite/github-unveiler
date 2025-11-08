@@ -21,6 +21,7 @@
   const SETTINGS_KEY = "githubUnveilerSettings";
   const displayNames = {}; // username => fetched display name
   const elementsByUsername = {}; // username => array of update callbacks
+  let cachedSettings = {}; // Cache settings in memory for instant access
 
   // Helper: Check if the extension context is valid
   function isExtensionContextValid() {
@@ -1061,7 +1062,7 @@
     nodesToProcess.clear();
   }
 
-  const observer = new MutationObserver(async (mutations) => {
+  const observer = new MutationObserver((mutations) => {
     let addedRelevantNode = false;
     for (const mutation of mutations) {
       mutation.addedNodes.forEach((node) => {
@@ -1076,9 +1077,8 @@
     }
 
     if (addedRelevantNode) {
-      // Check if debounce logic should be skipped
-      const settings = await getSettings();
-      if (settings.skipDebounceLogic) {
+      // Check if debounce logic should be skipped (using cached settings for instant access)
+      if (cachedSettings.skipDebounceLogic) {
         // Process immediately without debounce
         processCollectedNodes();
       } else {
@@ -1089,18 +1089,59 @@
     }
   });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+  // Initialize the extension by pre-loading cached display names and settings
+  async function initialize() {
+    // Pre-load settings into memory for instant access
+    try {
+      cachedSettings = await getSettings();
+    } catch (err) {
+      console.warn('Error pre-loading settings:', err);
+      cachedSettings = {};
+    }
 
-  // Initial scan for existing hovercards on page load
-  // Also perform initial scan for other elements covered by the observer's processing logic
-  processAnchorsByHovercard(document.body);
-  processProjectElements(document.body);
-  processSingleUserGridCell(document.body);
-  processMultiUserGridCell(document.body);
-  processBoardGroupHeader(document.body);
-  processBlockedSectionMessages(document.body);
-  document.querySelectorAll('div[data-hydro-view*="user-hovercard-hover"]').forEach(processHovercard);
+    // Pre-load cached display names into memory for instant replacement
+    try {
+      const parseEnabled = cachedSettings.parseDisplayNameFormat || false;
+      const cache = await getCache();
+      const serverCache = cache[location.hostname] || {};
+
+      // Pre-populate displayNames with all cached usernames for this hostname
+      for (const username in serverCache) {
+        const entry = serverCache[username];
+        if (entry && entry.displayName) {
+          const parsedDisplayName = parseDisplayNameFormat(entry.displayName, parseEnabled);
+          displayNames[username] = parsedDisplayName;
+        }
+      }
+    } catch (err) {
+      console.warn('Error pre-loading cache:', err);
+    }
+
+    // Listen for settings changes to update cached settings
+    if (chrome && chrome.storage && chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName === 'local' && changes[SETTINGS_KEY]) {
+          cachedSettings = changes[SETTINGS_KEY].newValue || {};
+        }
+      });
+    }
+
+    // Start observing DOM changes
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    // Initial scan for existing elements on page load
+    processAnchorsByHovercard(document.body);
+    processProjectElements(document.body);
+    processSingleUserGridCell(document.body);
+    processMultiUserGridCell(document.body);
+    processBoardGroupHeader(document.body);
+    processBlockedSectionMessages(document.body);
+    document.querySelectorAll('div[data-hydro-view*="user-hovercard-hover"]').forEach(processHovercard);
+  }
+
+  // Start the extension
+  initialize();
 })();
