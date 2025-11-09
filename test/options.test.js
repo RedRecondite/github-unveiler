@@ -54,6 +54,7 @@ describe('options.js', () => {
   let fakeStorageCache;
   let initialTimestamp;
   let optionsScriptMainFunction;
+  let originalScrollIntoView;
 
   beforeEach(async () => {
     jest.resetModules();
@@ -63,6 +64,8 @@ describe('options.js', () => {
     fakeStorageCache = {};
 
     // Mock scrollIntoView which is not available in JSDOM
+    // Save original to restore later
+    originalScrollIntoView = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = jest.fn();
 
     global.chrome = {
@@ -138,6 +141,13 @@ describe('options.js', () => {
     if (global.chrome.runtime) delete global.chrome.runtime.lastError;
     optionsScriptMainFunction = null;
     window.location.hash = ''; // Clear hash between tests
+
+    // Restore Element.prototype.scrollIntoView
+    if (originalScrollIntoView !== undefined) {
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    } else {
+      delete Element.prototype.scrollIntoView;
+    }
   });
 
   test('should include the logo image', () => {
