@@ -30,8 +30,9 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Check PR title
+      env:
+        PR_TITLE: ${{ github.event.pull_request.title }}
       run: |
-        PR_TITLE="${{ github.event.pull_request.title }}"
         echo "PR Title: $PR_TITLE"
 
         # Check if PR title is meaningful (not too short)
@@ -43,9 +44,9 @@ jobs:
         echo "PR title is valid"
 
     - name: Check for description
+      env:
+        PR_BODY: ${{ github.event.pull_request.body }}
       run: |
-        PR_BODY="${{ github.event.pull_request.body }}"
-
         if [ -z "$PR_BODY" ] || [ ${#PR_BODY} -lt 20 ]; then
           echo "Warning: PR description is empty or too short. Consider adding more details."
           echo "This is just a warning and won't fail the check."
