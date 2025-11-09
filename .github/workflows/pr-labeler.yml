@@ -2,53 +2,51 @@ name: PR Labeler
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, edited, reopened, synchronize]
 
 jobs:
-  label:
-    name: Label PR
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Label based on changed files
-      uses: actions/labeler@v5
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-
   validate-pr:
-    name: Validate PR
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Check PR title
-      run: |
-        PR_TITLE="${{ github.event.pull_request.title }}"
-        echo "PR Title: $PR_TITLE"
+      - name: Validate PR title and body
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          echo "PR Title: $PR_TITLE"
 
-        # Check if PR title is meaningful (not too short)
-        if [ ${#PR_TITLE} -lt 10 ]; then
-          echo "PR title is too short. Please provide a more descriptive title."
-          exit 1
-        fi
+          # Check if PR title is meaningful (not too short)
+          if [ ${#PR_TITLE} -lt 10 ]; then
+            echo "PR title is too short. Please provide a more descriptive title."
+            exit 1
+          fi
 
-        echo "PR title is valid"
+          echo "PR title is valid"
 
-    - name: Check for description
-      run: |
-        PR_BODY="${{ github.event.pull_request.body }}"
+          # Use quoted expansion to preserve quotes/newlines and avoid word-splitting
+          if [ -z "$PR_BODY" ] || [ ${#PR_BODY} -lt 20 ]; then
+            echo "Warning: PR description is empty or too short. Consider adding more details."
+            echo "This is just a warning and won't fail the check."
+          else
+            echo "PR has a description"
+          fi
 
-        if [ -z "$PR_BODY" ] || [ ${#PR_BODY} -lt 20 ]; then
-          echo "Warning: PR description is empty or too short. Consider adding more details."
-          echo "This is just a warning and won't fail the check."
-        else
-          echo "PR has a description"
-        fi
+      - name: Set outputs for other steps
+        id: pr
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # Emit multi-line output safely using a heredoc (GITHUB_OUTPUT)
+          echo "pr_title=${PR_TITLE}" >> $GITHUB_OUTPUT
+          echo "pr_body<<'EOF'" >> $GITHUB_OUTPUT
+          printf '%s\n' "$PR_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Example consumer
+        run: |
+          echo "Got PR title from output: ${{ steps.pr.outputs.pr_title }}"
+          echo "(PR body is available via steps.pr.outputs.pr_body)"
