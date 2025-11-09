@@ -77,15 +77,7 @@
         if (lowerUsername === pattern || lowerUsername.endsWith(`[${pattern}]`) || lowerUsername.endsWith(`-${pattern}`) || lowerUsername.startsWith(`${pattern}-`)) {
           return true;
         }
-        // If pattern is just "bot", check for common bot suffixes
-        if (pattern === "bot" && (lowerUsername.endsWith("[bot]") || lowerUsername.endsWith("-bot"))) {
-          return true;
-        }
       }
-    }
-    // Check for common bot indicators
-    if (lowerUsername.endsWith("[bot]") || lowerUsername.endsWith("-bot") || lowerUsername.startsWith("bot-")) {
-        return true;
     }
 
     return false;
@@ -164,12 +156,6 @@
     }
 
     if (usernameStr && isValidUsername(usernameStr)) {
-      // Explicitly exclude names that look like bot indicators from the URL itself,
-      // though isValidUsername should handle most structural issues.
-      // The main bot list check is in fetchDisplayName.
-      if (usernameStr.toLowerCase().includes("[bot]")) { // This was in old regex, good to keep a check here too.
-        return null;
-      }
       return usernameStr;
     }
     return null; // Return null if not valid or not found
