@@ -61,6 +61,12 @@ if (typeof chrome !== 'undefined' && chrome.action) {
     return;
   }
 
+  // Only request permissions for http(s) URLs
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    console.log("Skipping permission request for non-web URL:", url.protocol);
+    return;
+  }
+
   const originPattern = `${url.protocol}//${url.hostname}/*`;
   console.log("Requesting permission for", originPattern);
 
@@ -85,6 +91,10 @@ if (typeof chrome !== 'undefined' && chrome.tabs) {
       try {
         url = new URL(tab.url);
       } catch (e) {
+        return;
+      }
+      // Only check permissions for http(s) URLs
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
         return;
       }
       const originPattern = `${url.protocol}//${url.hostname}/*`;
