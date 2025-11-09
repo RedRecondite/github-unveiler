@@ -43,7 +43,8 @@ jobs:
           # Emit multi-line output safely using a heredoc (GITHUB_OUTPUT)
           echo "pr_title=${PR_TITLE}" >> $GITHUB_OUTPUT
           echo "pr_body<<'EOF'" >> $GITHUB_OUTPUT
-          printf '%s\n' "$PR_BODY" >> $GITHUB_OUTPUT
+          echo "description<<EOF" >> $GITHUB_OUTPUT
+          echo "$PR_BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Example consumer
