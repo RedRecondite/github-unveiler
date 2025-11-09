@@ -3,68 +3,15 @@
 // Tests for extension context invalidation handling
 // These functions ensure the extension gracefully handles context invalidation
 // that occurs when the extension is reloaded, updated, or disabled.
+//
+// This test file now imports and tests the ACTUAL code from content.js
 
 import { jest } from '@jest/globals';
+import { isExtensionContextValid, getCache, getSettings } from './content.test-helper.js';
 
 describe('Extension Context Invalidation Handling', () => {
   const CACHE_KEY = "githubDisplayNameCache";
   const SETTINGS_KEY = "githubUnveilerSettings";
-
-  // Helper function to check if the extension context is valid
-  function isExtensionContextValid() {
-    try {
-      // chrome.runtime.id becomes undefined when extension context is invalidated
-      return !!(chrome && chrome.runtime && chrome.runtime.id);
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // Helper: Get the cache from chrome.storage.local (mirrors content.js implementation)
-  function getCache() {
-    return new Promise((resolve) => {
-      if (!isExtensionContextValid()) {
-        resolve({});
-        return;
-      }
-      try {
-        chrome.storage.local.get([CACHE_KEY], (result) => {
-          if (chrome.runtime.lastError) {
-            console.warn('Chrome storage error:', chrome.runtime.lastError);
-            resolve({});
-          } else {
-            resolve(result[CACHE_KEY] || {});
-          }
-        });
-      } catch (e) {
-        console.warn('Extension context invalidated in getCache:', e.message);
-        resolve({});
-      }
-    });
-  }
-
-  // Helper: Get the settings from chrome.storage.local (mirrors content.js implementation)
-  function getSettings() {
-    return new Promise((resolve) => {
-      if (!isExtensionContextValid()) {
-        resolve({});
-        return;
-      }
-      try {
-        chrome.storage.local.get([SETTINGS_KEY], (result) => {
-          if (chrome.runtime.lastError) {
-            console.warn('Chrome storage error:', chrome.runtime.lastError);
-            resolve({});
-          } else {
-            resolve(result[SETTINGS_KEY] || {});
-          }
-        });
-      } catch (e) {
-        console.warn('Extension context invalidated in getSettings:', e.message);
-        resolve({});
-      }
-    });
-  }
 
   beforeEach(() => {
     // Clear console mocks before each test
