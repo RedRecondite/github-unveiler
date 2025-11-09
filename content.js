@@ -49,7 +49,7 @@
           }
         });
       } catch (e) {
-        console.warn('Extension context invalidated in getCache:', e.message);
+        //console.warn('Extension context invalidated in getCache:', e.message);
         resolve({});
       }
     });
@@ -72,7 +72,7 @@
           }
         });
       } catch (e) {
-        console.warn('Extension context invalidated in getSettings:', e.message);
+        //console.warn('Extension context invalidated in getSettings:', e.message);
         resolve({});
       }
     });
@@ -484,7 +484,7 @@
 
       // Check if extension context is valid before making runtime calls
       if (!isExtensionContextValid()) {
-        console.warn('Extension context invalidated, cannot fetch display name for @' + username);
+        //console.warn('Extension context invalidated, cannot fetch display name for @' + username);
         displayNames[username] = username;
         updateElements(username);
         return;
@@ -636,7 +636,6 @@
 
       // Check if extension context is valid before using chrome.runtime
       if (!isExtensionContextValid()) {
-        console.warn('Extension context invalidated, cannot add hovercard for @' + username);
         return;
       }
 
@@ -644,7 +643,6 @@
       try {
         iconUrl = chrome.runtime.getURL("icon16.png");
       } catch (e) {
-        console.warn('Failed to get icon URL:', e.message);
         return;
       }
       // Removed expirationText definition and logic block
@@ -678,7 +676,6 @@
 
       newRow.addEventListener("click", () => {
         if (!isExtensionContextValid()) {
-          console.warn('Extension context invalidated, cannot open options page');
           return;
         }
         try {
