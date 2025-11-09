@@ -1,0 +1,119 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, master, 'claude/**' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  integration-test:
+    name: Chrome Extension Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Chrome
+      run: |
+        # Install Chrome stable
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        echo "deb http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list.d/google.list
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+
+        # Verify Chrome installation
+        google-chrome --version
+
+    - name: Run integration tests
+      run: npm run test:integration
+      env:
+        CI: true
+        HEADLESS: true
+
+    - name: Upload screenshots on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-screenshots
+        path: test/integration/*.png
+        if-no-files-found: ignore
+        retention-days: 7
+
+    - name: Upload test logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-logs
+        path: |
+          test/integration/*.log
+          test/integration/*.txt
+        if-no-files-found: ignore
+        retention-days: 7
+
+  integration-test-matrix:
+    name: Integration Test - Chrome ${{ matrix.chrome-version }}
+    runs-on: ubuntu-latest
+    continue-on-error: true # Don't fail the build if specific Chrome versions fail
+
+    strategy:
+      matrix:
+        chrome-version: ['stable', 'beta']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Chrome ${{ matrix.chrome-version }}
+      run: |
+        if [ "${{ matrix.chrome-version }}" = "stable" ]; then
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list.d/google.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          google-chrome --version
+        elif [ "${{ matrix.chrome-version }}" = "beta" ]; then
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list.d/google.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-beta || {
+            echo "Beta version not available, using stable"
+            sudo apt-get install -y google-chrome-stable
+          }
+          google-chrome --version || google-chrome-beta --version
+        fi
+
+    - name: Run integration tests
+      run: npm run test:integration
+      env:
+        CI: true
+        HEADLESS: true
+
+    - name: Upload screenshots on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-screenshots-${{ matrix.chrome-version }}
+        path: test/integration/*.png
+        if-no-files-found: ignore
+        retention-days: 7
