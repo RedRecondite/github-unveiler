@@ -79,8 +79,9 @@ if (typeof chrome !== 'undefined' && chrome.action) {
 // Listen for tab updates to auto-inject the content script when permission is already granted.
 if (typeof chrome !== 'undefined' && chrome.tabs) {
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    // Only proceed when the tab is fully loaded.
-    if (changeInfo.status === "complete" && tab.url) {
+    // Inject as early as possible when loading starts for instant replace
+    // Use "loading" status to inject earlier, before page is fully rendered
+    if (changeInfo.status === "loading" && tab.url) {
       let url;
       try {
         url = new URL(tab.url);
@@ -103,9 +104,11 @@ if (typeof chrome !== 'undefined' && chrome.tabs) {
 function injectContentScript(tabId) {
   // Inject content-utils.js first to make utility functions available
   // Note: content-utils.js works in both browser and test contexts
+  // Use document_idle to run as soon as DOM is ready but before page is fully loaded
   chrome.scripting.executeScript({
     target: { tabId: tabId },
-    files: ["content-utils.js", "content.js"]
+    files: ["content-utils.js", "content.js"],
+    injectImmediately: true
   }, () => {
     if (chrome.runtime.lastError) {
       console.error("Script injection failed:", chrome.runtime.lastError);

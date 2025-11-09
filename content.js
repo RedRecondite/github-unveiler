@@ -80,15 +80,13 @@
   }
 
   // Helper: Pre-load all cached display names into memory for instant replace
-  async function preloadCache() {
+  // This is called with cache and settings already loaded to avoid redundant async calls
+  function preloadCacheSync(cache, parseEnabled) {
     if (cachePreloaded) {
       return; // Already preloaded
     }
 
     try {
-      const settings = await getSettings();
-      const parseEnabled = settings.parseDisplayNameFormat || false;
-      const cache = await getCache();
       const serverCache = cache[location.hostname] || {};
 
       // Load all cached display names into the displayNames object
@@ -1117,35 +1115,33 @@
     subtree: true,
   });
 
+  // Helper function to perform initial page scan
+  function performInitialScan() {
+    processAnchorsByHovercard(document.body);
+    processProjectElements(document.body);
+    processSingleUserGridCell(document.body);
+    processMultiUserGridCell(document.body);
+    processBoardGroupHeader(document.body);
+    processBlockedSectionMessages(document.body);
+    document.querySelectorAll('div[data-hydro-view*="user-hovercard-hover"]').forEach(processHovercard);
+  }
+
   // Initialize and perform initial scan
   (async function initialize() {
     try {
-      // Check if instant replace is enabled
-      const settings = await getSettings();
-      if (settings.instantReplace) {
-        // Pre-load all cached display names before processing the page
-        await preloadCache();
-      }
+      // Load cache and settings in parallel for maximum speed
+      const [cache, settings] = await Promise.all([getCache(), getSettings()]);
 
-      // Initial scan for existing hovercards on page load
-      // Also perform initial scan for other elements covered by the observer's processing logic
-      processAnchorsByHovercard(document.body);
-      processProjectElements(document.body);
-      processSingleUserGridCell(document.body);
-      processMultiUserGridCell(document.body);
-      processBoardGroupHeader(document.body);
-      processBlockedSectionMessages(document.body);
-      document.querySelectorAll('div[data-hydro-view*="user-hovercard-hover"]').forEach(processHovercard);
+      // If instant replace is enabled, pre-load all cached display names
+      // This happens synchronously once the data is loaded, no additional async delays
+      if (settings.instantReplace) {
+        preloadCacheSync(cache, settings.parseDisplayNameFormat || false);
+      }
     } catch (err) {
       console.error('Error during GitHub Unveiler initialization:', err);
-      // Still run the initial scan even if initialization fails
-      processAnchorsByHovercard(document.body);
-      processProjectElements(document.body);
-      processSingleUserGridCell(document.body);
-      processMultiUserGridCell(document.body);
-      processBoardGroupHeader(document.body);
-      processBlockedSectionMessages(document.body);
-      document.querySelectorAll('div[data-hydro-view*="user-hovercard-hover"]').forEach(processHovercard);
     }
+
+    // Always perform initial scan, even if cache loading fails
+    performInitialScan();
   })();
 })();
