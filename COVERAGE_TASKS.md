@@ -4,11 +4,11 @@
 
 | File | Statements | Branches | Functions | Lines | Status |
 |------|-----------|----------|-----------|-------|--------|
-| background.js | 90% | 84.37% | 85% | 90% | ✅ Excellent |
+| **background.js** | **98%** | **90.62%** | **95%** | **98%** | ✅ **Excellent!** |
 | **content-utils.js** | **100%** | **96.55%** | **100%** | **100%** | ✅ **Perfect!** |
 | content.js | 19.69% | 10.46% | 33.33% | 20.44% | ⚠️ Improving |
 | options.js | 42.48% | 31.54% | 55.17% | 42.47% | ✅ Good |
-| **Overall** | **39.37%** | **31.38%** | **54.45%** | **40.02%** | ✅ **Meeting Thresholds** |
+| **Overall** | **40.2%** | **32.03%** | **56.43%** | **40.88%** | ✅ **Meeting Thresholds** |
 
 **Current Thresholds**: 39% statements, 31% branches, 54% functions, 40% lines
 **Long-term Target**: 50%+ coverage across all metrics
@@ -18,8 +18,9 @@
 - ✅ Created content.test-helper.js for ES6 module exports
 - ✅ Updated content.extensioncontext.test.js to use real functions
 - ✅ Removed dead code from content-utils.js → **100% statement & line coverage!**
-- ✅ Overall coverage improved from 29.4% → 39.37% statements (+10%)
-- ✅ Functions coverage improved from 39.6% → 54.45% (+15%)
+- ✅ Added edge case tests for background.js → **98% coverage!**
+- ✅ Overall coverage improved from 29.4% → 40.2% statements (+10.8%)
+- ✅ Functions coverage improved from 39.6% → 56.43% (+16.83%)
 - ✅ Now meeting all coverage thresholds
 
 ---
@@ -133,19 +134,26 @@
 
 ---
 
-## Priority 3: Polish - background.js (90% coverage)
+## Priority 3: background.js - ✅ NEARLY COMPLETE!
 
-### File: background.js
+### File: background.js - **98% coverage achieved!**
 
-**Uncovered lines**: 43, 66-67, 98, 149-150, 154-156, 192
+**Achievement**: Added comprehensive edge case tests to achieve near-perfect coverage.
 
-These are mostly edge cases and error paths:
+#### Completed Tests:
+- [x] Lines 66-67: Non-web URL handling in onClicked (ftp://, chrome://)
+- [x] Line 98: Non-web URL handling in onUpdated (file://, chrome-extension://)
+- [x] Lines 154-156: openOptionsPage message handler
+- [x] Line 43: Error handling in clearOldCacheEntries
+- [x] Line 192: Error logging in updateCache
 
-- [ ] Test error handling in cache operations (lines 66-67)
-- [ ] Test edge cases in injectContentScript (lines 149-150, 154-156)
-- [ ] Test updateCache error path (line 192)
-- [ ] Test clearOldCacheEntries with various date scenarios (line 43)
-- [ ] Verify error handling in all async operations (line 98)
+#### Remaining Uncovered (Unreachable Dead Code):
+- Lines 149-150: Error handler in releaseLock message - **Unreachable**
+  - These lines cannot be executed because `updateCache` has an internal catch block (line 192) that swallows all errors
+  - The promise returned by `updateCache` never rejects, so the `.catch()` at lines 148-150 never executes
+  - Would require functional change to make reachable (rethrow error in updateCache or restructure promise chain)
+
+**Final Coverage**: 98% statements, 90.62% branches, 95% functions, 98% lines
 
 ---
 
