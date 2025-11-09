@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GitHub Unveiler",
-  "version": "1.9",
+  "version": "1.10.0",
   "description": "Replaces GitHub usernames with display names in GitHub and GitHub Enterprise instances.",
   "permissions": [
     "scripting",
