@@ -21,6 +21,7 @@
   const SETTINGS_KEY = "githubUnveilerSettings";
   const displayNames = {}; // username => fetched display name
   const elementsByUsername = {}; // username => array of update callbacks
+  let cachePreloaded = false; // Track if cache has been pre-loaded for instant replace
 
   // Helper: Check if the extension context is valid
   function isExtensionContextValid() {
@@ -76,6 +77,36 @@
         resolve({});
       }
     });
+  }
+
+  // Helper: Pre-load all cached display names into memory for instant replace
+  async function preloadCache() {
+    if (cachePreloaded) {
+      return; // Already preloaded
+    }
+
+    try {
+      const settings = await getSettings();
+      const parseEnabled = settings.parseDisplayNameFormat || false;
+      const cache = await getCache();
+      const serverCache = cache[location.hostname] || {};
+
+      // Load all cached display names into the displayNames object
+      for (const username in serverCache) {
+        const entry = serverCache[username];
+        if (entry && entry.displayName) {
+          // Apply display name parsing if enabled
+          const parsedDisplayName = parseDisplayNameFormat(entry.displayName, parseEnabled);
+          displayNames[username] = parsedDisplayName;
+        }
+      }
+
+      cachePreloaded = true;
+      console.log(`GitHub Unveiler: Pre-loaded ${Object.keys(displayNames).length} cached display names for instant replace`);
+    } catch (err) {
+      console.error('Error pre-loading cache for instant replace:', err);
+      cachePreloaded = true; // Mark as complete to avoid blocking page processing
+    }
   }
 
   // parseDisplayNameFormat is imported from content-utils.js
@@ -1086,13 +1117,35 @@
     subtree: true,
   });
 
-  // Initial scan for existing hovercards on page load
-  // Also perform initial scan for other elements covered by the observer's processing logic
-  processAnchorsByHovercard(document.body);
-  processProjectElements(document.body);
-  processSingleUserGridCell(document.body);
-  processMultiUserGridCell(document.body);
-  processBoardGroupHeader(document.body);
-  processBlockedSectionMessages(document.body);
-  document.querySelectorAll('div[data-hydro-view*="user-hovercard-hover"]').forEach(processHovercard);
+  // Initialize and perform initial scan
+  (async function initialize() {
+    try {
+      // Check if instant replace is enabled
+      const settings = await getSettings();
+      if (settings.instantReplace) {
+        // Pre-load all cached display names before processing the page
+        await preloadCache();
+      }
+
+      // Initial scan for existing hovercards on page load
+      // Also perform initial scan for other elements covered by the observer's processing logic
+      processAnchorsByHovercard(document.body);
+      processProjectElements(document.body);
+      processSingleUserGridCell(document.body);
+      processMultiUserGridCell(document.body);
+      processBoardGroupHeader(document.body);
+      processBlockedSectionMessages(document.body);
+      document.querySelectorAll('div[data-hydro-view*="user-hovercard-hover"]').forEach(processHovercard);
+    } catch (err) {
+      console.error('Error during GitHub Unveiler initialization:', err);
+      // Still run the initial scan even if initialization fails
+      processAnchorsByHovercard(document.body);
+      processProjectElements(document.body);
+      processSingleUserGridCell(document.body);
+      processMultiUserGridCell(document.body);
+      processBoardGroupHeader(document.body);
+      processBlockedSectionMessages(document.body);
+      document.querySelectorAll('div[data-hydro-view*="user-hovercard-hover"]').forEach(processHovercard);
+    }
+  })();
 })();
