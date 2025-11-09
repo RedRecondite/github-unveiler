@@ -1,17 +1,15 @@
-// Utility functions are loaded from content-utils.js which must be injected first
-// In the browser context, they are available as global functions
-// In the test context, they are imported as ES6 modules
+/**
+ * GitHub Unveiler content script
+ * This file works in both ES6 module context (for tests) and as a browser script
+ * (for the Chrome extension).
+ *
+ * Utility functions are loaded from content-utils.js which must be injected first.
+ * In the browser context, they are available as global functions.
+ * In the test context, they are imported as ES6 modules.
+ */
 
-(() => {
-  // ------------------------------
-  // Global Variables & Cache Setup
-  // ------------------------------
-
-  // ------------------------------
-  // Utility Functions
-  // ------------------------------
-  // Note: Core utility functions are imported from content-utils.js for better testability
-
+// Wrap in IIFE to prevent duplicate declarations on multiple injections
+(function() {
   // ------------------------------
   // Global Variables & Cache Setup
   // ------------------------------
@@ -1037,23 +1035,6 @@
     skipDebounce = settings.skipDebounce || false;
   }
 
-  // Listen for settings changes
-  if (isExtensionContextValid()) {
-    try {
-      chrome.storage.onChanged.addListener((changes, area) => {
-        if (area === 'local' && changes.githubUnveilerSettings) {
-          const newSettings = changes.githubUnveilerSettings.newValue || {};
-          skipDebounce = newSettings.skipDebounce || false;
-        }
-      });
-    } catch (e) {
-      console.warn('Failed to add storage change listener:', e.message);
-    }
-  }
-
-  // Initialize the setting
-  loadSkipDebounceSetting();
-
   function processCollectedNodes() {
     nodesToProcess.forEach(node => {
       if (node.nodeType === Node.ELEMENT_NODE) { // Ensure it's still an element node
@@ -1082,44 +1063,90 @@
     nodesToProcess.clear();
   }
 
-  const observer = new MutationObserver((mutations) => {
-    let addedRelevantNode = false;
-    for (const mutation of mutations) {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          // Add node to the set for processing.
-          // We add any element node and let the process functions filter.
-          // This is simpler than trying to be too specific here.
-          nodesToProcess.add(node);
-          addedRelevantNode = true;
-        }
-      });
-    }
+  // ==============================================================================
+  // Make functions available globally for browser and test contexts
+  // ==============================================================================
+  if (typeof window !== 'undefined' && !window.ghUnveilerContentLoaded) {
+    window.ghUnveilerContentLoaded = true;
+    window.isExtensionContextValid = isExtensionContextValid;
+    window.getCache = getCache;
+    window.getSettings = getSettings;
+    window.processBoardGroupHeader = processBoardGroupHeader;
+    window.processBlockedSectionMessages = processBlockedSectionMessages;
+    window.processMultiUserGridCell = processMultiUserGridCell;
+    window.processSingleUserGridCell = processSingleUserGridCell;
+    window.processProjectElements = processProjectElements;
+    window.processAnchorsByHovercard = processAnchorsByHovercard;
+    window.processHovercard = processHovercard;
+    window.registerElement = registerElement;
+    window.updateElements = updateElements;
+    window.fetchDisplayName = fetchDisplayName;
+    window.processCollectedNodes = processCollectedNodes;
+    window.loadSkipDebounceSetting = loadSkipDebounceSetting;
+    console.log("content.js loaded and functions exposed to window");
+  }
 
-    if (addedRelevantNode) {
-      if (skipDebounce) {
-        // Process immediately without debounce
-        processCollectedNodes();
-      } else {
-        // Use debounce delay
-        clearTimeout(debounceTimeout);
-        debounceTimeout = setTimeout(processCollectedNodes, DEBOUNCE_DELAY);
+  // ==============================================================================
+  // Initialization (only runs in browser context, not in tests)
+  // ==============================================================================
+  // Check if we're in a browser context with document.body available
+  if (typeof document !== 'undefined' && document.body && typeof MutationObserver !== 'undefined') {
+    // Listen for settings changes
+    if (isExtensionContextValid()) {
+      try {
+        chrome.storage.onChanged.addListener((changes, area) => {
+          if (area === 'local' && changes.githubUnveilerSettings) {
+            const newSettings = changes.githubUnveilerSettings.newValue || {};
+            skipDebounce = newSettings.skipDebounce || false;
+          }
+        });
+      } catch (e) {
+        console.warn('Failed to add storage change listener:', e.message);
       }
     }
-  });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+    // Initialize the setting
+    loadSkipDebounceSetting();
 
-  // Initial scan for existing hovercards on page load
-  // Also perform initial scan for other elements covered by the observer's processing logic
-  processAnchorsByHovercard(document.body);
-  processProjectElements(document.body);
-  processSingleUserGridCell(document.body);
-  processMultiUserGridCell(document.body);
-  processBoardGroupHeader(document.body);
-  processBlockedSectionMessages(document.body);
-  document.querySelectorAll('div[data-hydro-view*="user-hovercard-hover"]').forEach(processHovercard);
+    const observer = new MutationObserver((mutations) => {
+      let addedRelevantNode = false;
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            // Add node to the set for processing.
+            // We add any element node and let the process functions filter.
+            // This is simpler than trying to be too specific here.
+            nodesToProcess.add(node);
+            addedRelevantNode = true;
+          }
+        });
+      }
+
+      if (addedRelevantNode) {
+        if (skipDebounce) {
+          // Process immediately without debounce
+          processCollectedNodes();
+        } else {
+          // Use debounce delay
+          clearTimeout(debounceTimeout);
+          debounceTimeout = setTimeout(processCollectedNodes, DEBOUNCE_DELAY);
+        }
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    // Initial scan for existing hovercards on page load
+    // Also perform initial scan for other elements covered by the observer's processing logic
+    processAnchorsByHovercard(document.body);
+    processProjectElements(document.body);
+    processSingleUserGridCell(document.body);
+    processMultiUserGridCell(document.body);
+    processBoardGroupHeader(document.body);
+    processBlockedSectionMessages(document.body);
+    document.querySelectorAll('div[data-hydro-view*="user-hovercard-hover"]').forEach(processHovercard);
+  }
 })();

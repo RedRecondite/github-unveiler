@@ -28,15 +28,21 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Run tests
-      run: npm test
+    - name: Run tests with coverage
+      run: npm run test:coverage
 
-    - name: Upload coverage reports (if available)
-      if: matrix.node-version == 20 && always()
-      continue-on-error: true
+    - name: Upload coverage reports
+      if: matrix.node-version == 20
       uses: codecov/codecov-action@v4
       with:
         fail_ci_if_error: false
+        files: ./coverage/lcov.info
+
+    - name: Coverage Summary
+      if: matrix.node-version == 20
+      run: |
+        echo "Coverage Summary:"
+        cat coverage/coverage-summary.json || echo "No coverage summary found"
 
   validate:
     name: Validate Extension

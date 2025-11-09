@@ -117,6 +117,20 @@ describe("background.js", () => {
       expect(console.error).toHaveBeenCalledWith("Invalid URL:", tab.url);
     });
 
+    it("should skip permission request for non-web URLs (ftp)", () => {
+      const tab = { id: 1, url: "ftp://example.com/file" };
+      onClickedCallback(tab);
+      expect(console.log).toHaveBeenCalledWith("Skipping permission request for non-web URL:", "ftp:");
+      expect(chrome.permissions.request).not.toHaveBeenCalled();
+    });
+
+    it("should skip permission request for non-web URLs (chrome)", () => {
+      const tab = { id: 1, url: "chrome://extensions" };
+      onClickedCallback(tab);
+      expect(console.log).toHaveBeenCalledWith("Skipping permission request for non-web URL:", "chrome:");
+      expect(chrome.permissions.request).not.toHaveBeenCalled();
+    });
+
     it("should request permission and inject content script when permission is granted", () => {
       const tab = { id: 1, url: "https://example.com/page" };
       const expectedOriginPattern = "https://example.com/*";
@@ -152,6 +166,18 @@ describe("background.js", () => {
 
     it("should do nothing for an invalid URL", () => {
       const tab = { id: 1, url: "not-a-valid-url" };
+      onUpdatedCallback(tab.id, { status: "complete" }, tab);
+      expect(chrome.permissions.contains).not.toHaveBeenCalled();
+    });
+
+    it("should skip permission check for non-web URLs (file://)", () => {
+      const tab = { id: 1, url: "file:///path/to/file.html" };
+      onUpdatedCallback(tab.id, { status: "complete" }, tab);
+      expect(chrome.permissions.contains).not.toHaveBeenCalled();
+    });
+
+    it("should skip permission check for non-web URLs (chrome-extension://)", () => {
+      const tab = { id: 1, url: "chrome-extension://extensionid/page.html" };
       onUpdatedCallback(tab.id, { status: "complete" }, tab);
       expect(chrome.permissions.contains).not.toHaveBeenCalled();
     });
@@ -220,6 +246,48 @@ describe("background.js", () => {
           done();
         } catch (error) { done(error); }
       };
+      expect(onMessageCallback(message, null, sendResponse)).toBe(true);
+    });
+
+    it('should handle openOptionsPage message', () => {
+      const message = { type: "openOptionsPage", url: "options.html" };
+      const sendResponse = jest.fn();
+
+      onMessageCallback(message, null, sendResponse);
+
+      expect(chrome.tabs.create).toHaveBeenCalledWith({ url: "options.html" });
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
+    });
+
+    it('should log error in updateCache when cache write fails', (done) => {
+      const message = { type: "releaseLock", origin: "https://example.com", username: "user1", displayName: "User One" };
+
+      // Acquire lock first
+      onMessageCallback({ type: "acquireLock", origin: message.origin, username: message.username }, null, jest.fn());
+
+      // Mock chrome.storage.local.set to fail
+      const originalSet = chrome.storage.local.set;
+      chrome.storage.local.set = jest.fn((data, callback) => {
+        throw new Error("Storage write failed");
+      });
+
+      const sendResponse = (response) => {
+        try {
+          // updateCache catches errors internally (line 192) and doesn't reject
+          // So the releaseLock handler still gets success: true
+          // Lines 149-150 are unreachable because errors are caught in updateCache
+          expect(response.success).toBe(true);
+          expect(console.error).toHaveBeenCalledWith("Error updating cache:", expect.any(Error));
+
+          // Restore original set
+          chrome.storage.local.set = originalSet;
+          done();
+        } catch (error) {
+          chrome.storage.local.set = originalSet;
+          done(error);
+        }
+      };
+
       expect(onMessageCallback(message, null, sendResponse)).toBe(true);
     });
   });
@@ -415,6 +483,27 @@ describe("background.js", () => {
       expect(originCache.spaceRecent.displayName).toBe("spaceRecent");
       expect(originCache.validNoExpire.displayName).toBe("Valid Name");
       expect(originCache.emptyToBeDeleted).toBeUndefined();
+    });
+
+    it("should log error when clearOldCacheEntries fails", async () => {
+      // Mock chrome.storage.local.get to throw an error
+      const originalGet = chrome.storage.local.get;
+      chrome.storage.local.get = jest.fn((keys, callback) => {
+        throw new Error("Storage read failed during clear");
+      });
+
+      jest.resetModules();
+
+      // Import background.js which will trigger clearOldCacheEntries
+      await import("../background.js");
+
+      // Wait a bit for the async clearOldCacheEntries to complete
+      await new Promise(r => setTimeout(r, 50));
+
+      expect(console.error).toHaveBeenCalledWith("Error clearing old cache entries:", expect.any(Error));
+
+      // Restore original get
+      chrome.storage.local.get = originalGet;
     });
   });
   
