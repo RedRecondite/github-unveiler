@@ -6,9 +6,30 @@
   },
   "jest": {
     "testEnvironment": "jest-environment-jsdom",
-    "transform": {}
+    "transform": {},
+    "collectCoverageFrom": [
+      "*.js",
+      "!test/**",
+      "!node_modules/**"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "text-summary",
+      "lcov",
+      "html"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 25,
+        "functions": 35,
+        "lines": 25,
+        "statements": 25
+      }
+    }
   },
   "scripts": {
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   }
 }
