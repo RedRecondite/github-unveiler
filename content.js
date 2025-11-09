@@ -1086,13 +1086,29 @@
         });
       } else if (mutation.type === 'characterData') {
         // Handle character data changes (text content changes in text nodes)
-        // Process the parent element that contains the changed text
-        const parentElement = mutation.target.parentElement;
-        if (parentElement) {
-          // Remove processed marker to allow reprocessing since content changed
-          parentElement.removeAttribute(PROCESSED_MARKER);
-          nodesToProcess.add(parentElement);
+        // Walk up the tree to find container elements worth reprocessing
+        let element = mutation.target.parentElement;
+        let depth = 0;
+        const maxDepth = 5; // Walk up max 5 levels to find good containers
+
+        while (element && depth < maxDepth) {
+          // Remove processed marker to allow reprocessing
+          element.removeAttribute(PROCESSED_MARKER);
+
+          // Add this element to be reprocessed
+          nodesToProcess.add(element);
           addedRelevantNode = true;
+
+          // If we found a link or other significant container, stop here
+          if (element.tagName === 'A' ||
+              element.hasAttribute('data-hovercard-url') ||
+              element.classList.contains('commit') ||
+              element.classList.contains('TimelineItem')) {
+            break;
+          }
+
+          element = element.parentElement;
+          depth++;
         }
       }
     }
