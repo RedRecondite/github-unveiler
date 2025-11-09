@@ -1032,6 +1032,30 @@
   let debounceTimeout = null;
   const nodesToProcess = new Set();
   const DEBOUNCE_DELAY = 200; // ms
+  let skipDebounce = false; // Global flag for skip debounce setting
+
+  // Load skip debounce setting
+  async function loadSkipDebounceSetting() {
+    const settings = await getSettings();
+    skipDebounce = settings.skipDebounce || false;
+  }
+
+  // Listen for settings changes
+  if (isExtensionContextValid()) {
+    try {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === 'local' && changes.githubUnveilerSettings) {
+          const newSettings = changes.githubUnveilerSettings.newValue || {};
+          skipDebounce = newSettings.skipDebounce || false;
+        }
+      });
+    } catch (e) {
+      console.warn('Failed to add storage change listener:', e.message);
+    }
+  }
+
+  // Initialize the setting
+  loadSkipDebounceSetting();
 
   function processCollectedNodes() {
     nodesToProcess.forEach(node => {
@@ -1076,8 +1100,14 @@
     }
 
     if (addedRelevantNode) {
-      clearTimeout(debounceTimeout);
-      debounceTimeout = setTimeout(processCollectedNodes, DEBOUNCE_DELAY);
+      if (skipDebounce) {
+        // Process immediately without debounce
+        processCollectedNodes();
+      } else {
+        // Use debounce delay
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(processCollectedNodes, DEBOUNCE_DELAY);
+      }
     }
   });
 
