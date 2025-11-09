@@ -2,19 +2,36 @@ name: PR Labeler
 
 on:
   pull_request:
-    types: [opened, edited, reopened, synchronize]
+    types: [opened, synchronize, reopened]
 
 jobs:
-  validate-pr:
+  label:
+    name: Label PR
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Label based on changed files
+      uses: actions/labeler@v5
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  validate-pr:
+    name: Validate PR
+    runs-on: ubuntu-latest
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Check PR title
-      env:
-        PR_TITLE: ${{ github.event.pull_request.title }}
       run: |
+        PR_TITLE="${{ github.event.pull_request.title }}"
         echo "PR Title: $PR_TITLE"
 
         # Check if PR title is meaningful (not too short)
@@ -26,9 +43,9 @@ jobs:
         echo "PR title is valid"
 
     - name: Check for description
-      env:
-        PR_BODY: ${{ github.event.pull_request.body }}
       run: |
+        PR_BODY="${{ github.event.pull_request.body }}"
+
         if [ -z "$PR_BODY" ] || [ ${#PR_BODY} -lt 20 ]; then
           echo "Warning: PR description is empty or too short. Consider adding more details."
           echo "This is just a warning and won't fail the check."
