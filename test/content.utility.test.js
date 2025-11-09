@@ -207,4 +207,31 @@ describe('getUsername', () => {
     const anchor = createMockAnchor({ href: '/' });
     expect(getUsername(anchor)).toBeNull();
   });
+
+  test('should return null for username containing [bot]', () => {
+    const anchor = createMockAnchor({ href: '/dependabot[bot]' });
+    expect(getUsername(anchor)).toBeNull();
+  });
+});
+
+describe('isBotUsername - Additional Coverage', () => {
+  test('should detect bot with -bot suffix when pattern is "bot"', () => {
+    expect(isBotUsername('deploy-bot')).toBe(true);
+    expect(isBotUsername('ci-bot')).toBe(true);
+  });
+
+  test('should detect bot with [bot] suffix as common bot indicator', () => {
+    expect(isBotUsername('github[bot]')).toBe(true);
+    expect(isBotUsername('dependabot[bot]')).toBe(true);
+  });
+
+  test('should detect bot with -bot suffix as common bot indicator', () => {
+    expect(isBotUsername('release-bot')).toBe(true);
+    expect(isBotUsername('merge-bot')).toBe(true);
+  });
+
+  test('should detect bot with bot- prefix as common bot indicator', () => {
+    expect(isBotUsername('bot-deploy')).toBe(true);
+    expect(isBotUsername('bot-ci')).toBe(true);
+  });
 });
