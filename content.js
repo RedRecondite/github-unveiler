@@ -1035,6 +1035,9 @@
   const DEBOUNCE_DELAY = 200; // ms
 
   function processCollectedNodes() {
+    // Temporarily disconnect observer to prevent our changes from triggering more mutations
+    observer.disconnect();
+
     nodesToProcess.forEach(node => {
       if (node.nodeType === Node.ELEMENT_NODE) { // Ensure it's still an element node
         processAnchorsByHovercard(node);
@@ -1060,20 +1063,38 @@
       }
     });
     nodesToProcess.clear();
+
+    // Reconnect observer after processing
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      characterDataOldValue: false
+    });
   }
 
   const observer = new MutationObserver((mutations) => {
     let addedRelevantNode = false;
     for (const mutation of mutations) {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          // Add node to the set for processing.
-          // We add any element node and let the process functions filter.
-          // This is simpler than trying to be too specific here.
-          nodesToProcess.add(node);
+      if (mutation.type === 'childList') {
+        // Handle added nodes
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            nodesToProcess.add(node);
+            addedRelevantNode = true;
+          }
+        });
+      } else if (mutation.type === 'characterData') {
+        // Handle character data changes (text content changes in text nodes)
+        // Process the parent element that contains the changed text
+        const parentElement = mutation.target.parentElement;
+        if (parentElement) {
+          // Remove processed marker to allow reprocessing since content changed
+          parentElement.removeAttribute(PROCESSED_MARKER);
+          nodesToProcess.add(parentElement);
           addedRelevantNode = true;
         }
-      });
+      }
     }
 
     if (addedRelevantNode) {
@@ -1130,6 +1151,8 @@
     observer.observe(document.body, {
       childList: true,
       subtree: true,
+      characterData: true,
+      characterDataOldValue: false
     });
 
     // Initial scan for existing elements on page load
